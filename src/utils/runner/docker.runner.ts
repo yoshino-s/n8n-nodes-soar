@@ -67,6 +67,7 @@ export class DockerRuneer implements Runner {
 			{}
 		);
 
+		stderr;
 		return JSON.parse(stdout);
 	}
 }
