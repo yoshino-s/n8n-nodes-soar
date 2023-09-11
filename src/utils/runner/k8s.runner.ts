@@ -1,4 +1,4 @@
-import { Writable } from "node:stream";
+import { Writable } from "stream";
 
 import * as k8s from "@kubernetes/client-node";
 import {
@@ -7,7 +7,9 @@ import {
 	NodeOperationError,
 } from "n8n-workflow";
 
-export class K8SClient {
+import { IMAGE, Runner } from "./runner";
+
+export class K8sRunner implements Runner {
 	kubeConfig: k8s.KubeConfig;
 	constructor(
 		credentials: ICredentialDataDecryptedObject,
@@ -56,18 +58,20 @@ export class K8SClient {
 		}
 		this.kubeConfig = kubeConfig;
 	}
-	async runPodAndGetOutput(
-		image: string,
-		args: string[],
-		podName?: string,
-		namespace = "default"
-	): Promise<string> {
+	async run<T extends string>(
+		cmd: string[],
+		env?: Record<string, string>
+	): Promise<{
+		stdout: string;
+		stderr: string;
+		files: Record<T, string>;
+	}> {
 		const kc = this.kubeConfig;
 
 		const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
 		const watch = new k8s.Watch(kc);
 
-		podName ??= `n8n-pod-${Date.now()}`;
+		const podName = `n8n-soar-pod-${Date.now()}`;
 
 		const podSpec: k8s.V1Pod = {
 			metadata: {
@@ -78,12 +82,22 @@ export class K8SClient {
 				containers: [
 					{
 						name: "main-container",
-						image: image,
-						args,
+						image: IMAGE,
+						imagePullPolicy: "Always",
+						args: cmd,
+						env: Object.entries(env ?? {}).map(([name, value]) => ({
+							name,
+							value,
+						})),
+						lifecycle: {},
 					},
 				],
 			},
 		};
+
+		this.func.logger.info("Creating pod " + JSON.stringify(podSpec));
+
+		const namespace = "default";
 
 		await k8sCoreApi.createNamespacedPod(namespace, podSpec);
 
@@ -118,7 +132,7 @@ export class K8SClient {
 									req.on("error", reject);
 									req.on("complete", () => {
 										watchReq?.abort();
-										resolve(logs);
+										resolve(JSON.parse(logs));
 									});
 								})
 								.catch((err) => {

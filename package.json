@@ -1,25 +1,26 @@
 {
-  "name": "n8n-nodes-container",
+  "name": "n8n-nodes-soar",
   "version": "0.1.8",
   "description": "",
   "keywords": [
     "n8n-community-node-package"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/yoshino-s/n8n-nodes-container.git",
+  "homepage": "https://github.com/yoshino-s/n8n-nodes-soar.git",
   "author": {
     "name": "Yoshino-s",
     "email": "cy-cui@outlook.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yoshino-s/n8n-nodes-container.git"
+    "url": "https://github.com/yoshino-s/n8n-nodes-soar.git"
   },
   "main": "index.js",
   "scripts": {
     "prepare": "husky install",
     "build": "swc src -d dist && ts-node ./scripts/copy.ts",
     "build:watch": "ts-node ./scripts/copy.ts && swc src -d dist --watch",
+    "new": "ts-node ./scripts/new.ts",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "prepublishOnly": "yarn build",
@@ -32,13 +33,10 @@
   ],
   "n8n": {
     "n8nNodesApiVersion": 1,
-    "credentials": [
-      "dist/credentials/DockerCredentials.credentials.js",
-      "dist/credentials/KubernetesCredentials.credentials.js"
-    ],
     "nodes": [
-      "dist/nodes/Docker/Docker.node.js",
-      "dist/nodes/Kubernetes/Kubernetes.node.js"
+      "dist/nodes/Katana/Katana.node.js",
+      "dist/nodes/Subfinder/Subfinder.node.js",
+      "dist/nodes/Httpx/Httpx.node.js"
     ]
   },
   "devDependencies": {
@@ -91,7 +89,7 @@
     "header": "# Changelog\n\n"
   },
   "dependencies": {
-    "@kubernetes/client-node": "^0.18.1",
-    "dockerode": "^3.3.5"
+    "dockerode": "^3.3.5",
+    "n8n-nodes-container": "^0.1.8"
   }
 }

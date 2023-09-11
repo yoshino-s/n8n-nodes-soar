@@ -5011,6 +5011,14 @@ n8n-core@^1.0.1:
     qs "^6.10.1"
     uuid "^8.3.2"
 
+n8n-nodes-container@^0.1.8:
+  version "0.1.8"
+  resolved "https://registry.npmmirror.com/n8n-nodes-container/-/n8n-nodes-container-0.1.8.tgz#7d1baa7e6464cccc44fa91136f1f63cc5349c18e"
+  integrity sha512-2npwT4MfL03ub8PrjrRseKljdxDD6SMn7M5VVNPlnlguAUdggUoRx7mftN3ZXmtAjBmLrSx/DR+r1kbWB7Pl3w==
+  dependencies:
+    "@kubernetes/client-node" "^0.18.1"
+    dockerode "^3.3.5"
+
 n8n-workflow@1.0.1, n8n-workflow@^1.0.1:
   version "1.0.1"
   resolved "https://registry.npmmirror.com/n8n-workflow/-/n8n-workflow-1.0.1.tgz#e75467f9e71249fa664508f509ea47666e3e64a3"
