@@ -1,6 +1,13 @@
 # Changelog
 
 
+### [0.1.10](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.9...v0.1.10) (2023-09-11)
+
+
+### Bug Fixes
+
+* **lint:** fix lint problem ([d929e0b](https://github.com/yoshino-s/n8n-nodes-soar/commit/d929e0b66dd111a7862836ddd68782449b43465b))
+
 ### [0.1.9](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.8...v0.1.9) (2023-09-11)
 
 
