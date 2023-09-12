@@ -1,6 +1,14 @@
 # Changelog
 
 
+### [0.1.11](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.10...v0.1.11) (2023-09-12)
+
+
+### Features
+
+* **common:** extract common part ([ebe8175](https://github.com/yoshino-s/n8n-nodes-soar/commit/ebe8175e72c9fc69919e910af50cbf6a98d3f10e))
+* **nodes:** add nodes ([55d98d0](https://github.com/yoshino-s/n8n-nodes-soar/commit/55d98d039113bebd29cc23828ea0abc421998aaa))
+
 ### [0.1.10](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.9...v0.1.10) (2023-09-11)
 
 
