@@ -95,7 +95,7 @@ export class K8sRunner implements Runner {
 			},
 		};
 
-		this.func.logger.info("Creating pod " + JSON.stringify(podSpec));
+		this.func.logger.debug("Creating pod " + JSON.stringify(podSpec));
 
 		const namespace = "default";
 

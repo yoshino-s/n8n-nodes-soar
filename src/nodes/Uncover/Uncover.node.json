@@ -1,5 +1,5 @@
 {
-  "node": "n8n-nodes-soar.httpx",
+  "node": "n8n-nodes-soar.uncover",
   "nodeVersion": "1.0",
   "codexVersion": "1.0",
   "categories": [

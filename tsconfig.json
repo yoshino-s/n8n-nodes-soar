@@ -1,6 +1,7 @@
 {
 	"compilerOptions": {
 		"module": "commonjs",
+		"moduleResolution": "node",
 		"declaration": true,
 		"emitDeclarationOnly": true,
 		"removeComments": true,
@@ -16,7 +17,4 @@
 		"incremental": true,
 		"skipLibCheck": true,
 	},
-	"ts-node": {
-	 "swc": true
-	}
 }

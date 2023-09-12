@@ -8,36 +8,54 @@ import { DockerRuneer } from "./runner/docker.runner";
 import { K8sRunner } from "./runner/k8s.runner";
 import { Runner } from "./runner/runner";
 
-export const commonProperties: INodeProperties[] = [
-	{
-		displayName: "Batch",
-		name: "batch",
-		type: "boolean",
-		default: false,
-	},
-	{
-		displayName: "Target",
-		name: "target",
-		type: "string",
-		default: "",
-		displayOptions: {
-			show: {
-				batch: [false],
+export interface RunOptions {
+	extraArgs?: string[];
+	extraArgParameters?: string[];
+	env?: Record<string, string>;
+	files?: Record<string, string>;
+	collectFiles?: string[];
+}
+
+export const injectCommonProperties = (
+	p: INodeProperties[],
+	target = true
+): INodeProperties[] => {
+	const properties: INodeProperties[] = [];
+	if (target) {
+		properties.push(
+			{
+				displayName: "Batch",
+				name: "batch",
+				type: "boolean",
+				default: false,
 			},
-		},
-	},
-	{
-		displayName: "Targets",
-		name: "targets",
-		type: "json",
-		default: "[]",
-		displayOptions: {
-			show: {
-				batch: [true],
+			{
+				displayName: "Target",
+				name: "target",
+				type: "string",
+				default: "",
+				displayOptions: {
+					show: {
+						batch: [false],
+					},
+				},
 			},
-		},
-	},
-	{
+			{
+				displayName: "Targets",
+				name: "targets",
+				type: "json",
+				default: "[]",
+				displayOptions: {
+					show: {
+						batch: [true],
+					},
+				},
+			}
+		);
+	}
+
+	properties.push(...p);
+	properties.push({
 		displayName: "Advanced Config",
 		name: "advanced",
 		type: "fixedCollection",
@@ -83,8 +101,8 @@ export const commonProperties: INodeProperties[] = [
 				],
 			},
 			{
-				name: "Collect Files",
-				displayName: "colllectFiles",
+				displayName: "Collect Files",
+				name: "colllectFiles",
 				values: [
 					{
 						displayName: "Name",
@@ -95,8 +113,9 @@ export const commonProperties: INodeProperties[] = [
 				],
 			},
 		],
-	},
-];
+	});
+	return properties;
+};
 
 export class SoarExecutor {
 	constructor(private readonly func: IExecuteFunctions) {}
@@ -129,10 +148,13 @@ export class SoarExecutor {
 		idx: number,
 		target: string,
 		targetArg: string,
-		extraArgs: string[],
-		env: Record<string, string> = {},
-		files: Record<string, string> = {},
-		collectFiles: string[] = []
+		{
+			env = {},
+			files = {},
+			collectFiles = [],
+			extraArgs = [],
+			extraArgParameters = [],
+		}: RunOptions = {}
 	): Promise<{
 		stdout: string;
 		files: Record<string, string>;
@@ -140,21 +162,23 @@ export class SoarExecutor {
 		const runner = await this.getRunner(idx);
 		const cmdline = ["/usr/local/bin/runner"];
 
-		const _env =
-			(this.func.getNodeParameter("advanced.envs", idx, []) as {
-				key: string;
-				value: string;
-			}[]) ?? [];
+		const _env = this.func.getNodeParameter("advanced.envs", idx, []) as {
+			key: string;
+			value: string;
+		}[];
 		env = Object.assign(
 			{},
 			env,
 			Object.fromEntries(_env.map(({ key, value }) => [key, value]))
 		);
-		const _files =
-			(this.func.getNodeParameter("advanced.files", idx, []) as {
-				name: string;
-				content: string;
-			}[]) ?? [];
+		const _files = this.func.getNodeParameter(
+			"advanced.files",
+			idx,
+			[]
+		) as {
+			name: string;
+			content: string;
+		}[];
 		files = Object.assign(
 			{},
 			files,
@@ -162,24 +186,35 @@ export class SoarExecutor {
 				_files.map(({ name, content }) => [name, content])
 			)
 		);
-		const _collectFiles =
-			(this.func.getNodeParameter("advanced.collectFiles", idx, []) as {
-				name: string;
-			}[]) ?? [];
+		const _collectFiles = this.func.getNodeParameter(
+			"advanced.collectFiles",
+			idx,
+			[]
+		) as {
+			name: string;
+		}[];
 		collectFiles = collectFiles.concat(
 			_collectFiles.map(({ name }) => name)
 		);
 
 		let targets: string[] = [];
 		if (this.func.getNodeParameter("batch", idx) as boolean) {
-			targets =
-				(JSON.parse(
-					this.func.getNodeParameter("targets", idx) as string
-				) as string[]) ?? [];
+			targets = this.func.getNodeParameter(
+				"targets",
+				idx,
+				[]
+			) as string[];
+			if (
+				!Array.isArray(targets) ||
+				targets.every((t) => typeof t !== "string")
+			) {
+				throw new NodeOperationError(
+					this.func.getNode(),
+					"Invalid targets"
+				);
+			}
 		} else {
-			targets = [
-				(this.func.getNodeParameter("target", idx) as string) ?? "",
-			];
+			targets = [this.func.getNodeParameter("target", idx, "") as string];
 		}
 
 		for (const [key, value] of Object.entries<string>(files)) {
@@ -190,15 +225,38 @@ export class SoarExecutor {
 		}
 		cmdline.push("--");
 
-		const cmdd = [
-			target,
-			...targets.flatMap((target) => [targetArg, target]),
-			...extraArgs,
-		];
+		const cmdd = [target, ...extraArgs];
+
+		if (targetArg) {
+			cmdd.push(...targets.flatMap((target) => [targetArg, target]));
+		}
+
+		for (const parameter of extraArgParameters) {
+			const value = this.func.getNodeParameter(parameter, idx, null);
+			if (!value) continue;
+			if (typeof value === "string") {
+				cmdd.push(parameter, value);
+			} else if (Array.isArray(value)) {
+				value.forEach((v) => {
+					if (typeof v === "string") {
+						cmdd.push(v);
+					} else {
+						const { key, value } = v;
+						if (value) {
+							cmdd.push(key, value);
+						} else {
+							cmdd.push(key);
+						}
+					}
+				});
+			}
+		}
 
 		for (const cmd of cmdd) {
 			cmdline.push(cmd);
 		}
+
+		this.func.logger.debug("Running " + cmdline.join(" "));
 
 		const {
 			stdout,
@@ -212,6 +270,7 @@ export class SoarExecutor {
 		if (stderr) {
 			this.func.logger.warn(stderr);
 		}
+		this.func.logger.debug("Stdout: " + stdout);
 		return { stdout, files: resultFiles };
 	}
 }

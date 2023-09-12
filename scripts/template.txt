@@ -1,0 +1,58 @@
+import {
+	IExecuteFunctions,
+	INodeExecutionData,
+	INodeType,
+	INodeTypeDescription,
+	NodeExecutionWithMetadata,
+} from "n8n-workflow";
+
+import { SoarExecutor, injectCommonProperties } from "../../utils/executor";
+
+export class Template implements INodeType {
+	description: INodeTypeDescription = {
+		displayName: "Soar: Template",
+		name: "template",
+		group: ["output"],
+		version: 1,
+		subtitle:
+			"={{ 'template' + ($parameter['batch'] ? ' (Batch)' : ' on ' + $parameter['target']) }}",
+		description: "Interact with Template",
+		defaults: {
+			name: "Template",
+		},
+		inputs: ["main"],
+		outputs: ["main"],
+		credentials: [
+			{
+				name: "dockerCredentialsApi",
+			},
+			{
+				name: "kubernetesCredentialsApi",
+			},
+		],
+		properties: injectCommonProperties(PROPERTY),
+	};
+	async execute(
+		this: IExecuteFunctions
+	): Promise<INodeExecutionData[][] | NodeExecutionWithMetadata[][]> {
+		const result: INodeExecutionData[] = [];
+		const executor = new SoarExecutor(this);
+		for (let idx = 0; idx < this.getInputData().length; idx++) {
+			const response = await executor.run(idx, "template", TARGET_ARG, {
+				extraArgs: EXTRA_ARGS,
+				extraArgParameters: EXTRA_ARG_PARAMETERS,
+			});
+
+			result.push(
+				...this.helpers.constructExecutionMetaData(
+					this.helpers.returnJsonArray(
+						(FORMAT_MAP)(response.stdout)
+					),
+					{ itemData: { item: idx } }
+				)
+			);
+		}
+
+		return [result];
+	}
+}
