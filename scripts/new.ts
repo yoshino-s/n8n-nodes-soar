@@ -81,6 +81,7 @@ async function main() {
 			.replace(/Template/g, toCamelCase(n, true))
 			.replace(/template/g, `${toCamelCase(n, false)}`)
 			.replace("PROPERTY", JSON.stringify(properties, null, 2))
+			.replace("HAS_TARGET_ARG", targetArg ? "true" : "false")
 			.replace("TARGET_ARG", JSON.stringify(targetArg, null, 2))
 			.replace("EXTRA_ARGS", JSON.stringify(extraArgs, null, 2))
 			.replace(

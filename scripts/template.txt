@@ -30,7 +30,7 @@ export class Template implements INodeType {
 				name: "kubernetesCredentialsApi",
 			},
 		],
-		properties: injectCommonProperties(PROPERTY),
+		properties: injectCommonProperties(PROPERTY, HAS_TARGET_ARG),
 	};
 	async execute(
 		this: IExecuteFunctions

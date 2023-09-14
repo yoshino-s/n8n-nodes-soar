@@ -449,7 +449,14 @@ export class Naabu implements INodeType {
 
 			result.push(
 				...this.helpers.constructExecutionMetaData(
-					this.helpers.returnJsonArray(JSON.parse(response.stdout)),
+					this.helpers.returnJsonArray(
+						((d) =>
+							d
+								.split("\n")
+								.map((n) => n.trim())
+								.filter(Boolean)
+								.map((d) => JSON.parse(d)))(response.stdout)
+					),
 					{ itemData: { item: idx } }
 				)
 			);

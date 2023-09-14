@@ -60,10 +60,14 @@ export async function parseProjectDiscovery(
 				.split(", ")
 				.reduce((p, c) => (p.length > c.length ? p : c), "");
 
-			if (options?.name === "output" && args.includes("json")) {
+			if (
+				(options?.name === "output" && args === "-json") ||
+				args === "-jsonl"
+			) {
 				if (
 					args.includes("jsonl") ||
-					description.toLocaleLowerCase().includes("jsonl")
+					description.toLocaleLowerCase().includes("jsonl") ||
+					description.toLocaleLowerCase().includes("line")
 				) {
 					result.format = "jsonl";
 					result.extraArgs.push(args);
@@ -115,7 +119,7 @@ export async function parseProjectDiscovery(
 		} else {
 			line = line.slice(0, -1);
 
-			if (options?.name === "input") {
+			if (["input", "target"].includes(options?.name)) {
 				await inquirer
 					.prompt([
 						{
