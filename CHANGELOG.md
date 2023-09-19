@@ -1,6 +1,18 @@
 # Changelog
 
 
+### [0.1.12](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.11...v0.1.12) (2023-09-19)
+
+
+### Features
+
+* **fofa:** add fofa node ([91b19cf](https://github.com/yoshino-s/n8n-nodes-soar/commit/91b19cf300e1f9fd2c5eb21838ebb70bec0f31ce))
+
+
+### Bug Fixes
+
+* nuclei ([947131c](https://github.com/yoshino-s/n8n-nodes-soar/commit/947131c790d50ba38cdedabaa4966d55b1a53d8a))
+
 ### [0.1.11](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.10...v0.1.11) (2023-09-12)
 
 
