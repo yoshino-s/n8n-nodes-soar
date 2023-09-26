@@ -1,6 +1,13 @@
 # Changelog
 
 
+### [0.1.13](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.12...v0.1.13) (2023-09-26)
+
+
+### Features
+
+* **tshark:** add tshark ([07090eb](https://github.com/yoshino-s/n8n-nodes-soar/commit/07090eb6a47662cfeaf639d87ca70f76e76e1e4f))
+
 ### [0.1.12](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.11...v0.1.12) (2023-09-19)
 
 
