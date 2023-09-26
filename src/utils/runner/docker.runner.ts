@@ -25,7 +25,8 @@ export class DockerRuneer implements Runner {
 	}
 	async run<T extends string>(
 		cmd: string[],
-		env?: Record<string, string>
+		env?: Record<string, string>,
+		image: string = IMAGE
 	): Promise<{
 		stdout?: string;
 		stderr?: string;
@@ -49,16 +50,16 @@ export class DockerRuneer implements Runner {
 			},
 		});
 
-		await this.docker.pull(IMAGE);
+		await this.docker.pull(image);
 
 		await this.docker.run(
-			IMAGE,
+			image,
 			cmd,
 			[outStream, errStream],
 			{
 				Tty: false,
 				HostConfig: {
-					AutoRemove: true,
+					AutoRemove: false,
 				},
 				Env: Object.entries(env || {}).map(
 					([key, value]) => `${key}=${value}`
@@ -68,6 +69,9 @@ export class DockerRuneer implements Runner {
 		);
 
 		stderr;
+
+		console.log(stderr, stdout);
+
 		return JSON.parse(stdout);
 	}
 }

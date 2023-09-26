@@ -5,8 +5,12 @@ import chalk from "chalk";
 
 import pkg from "../package.json";
 
-import { parseProjectDiscovery } from "./parse";
+import { parseOptions } from "./parser";
 import { toCamelCase } from "./utils";
+
+const IMAGE =
+	process.env["SOAR_IMAGE"] ??
+	"registry.yoshino-s.xyz/yoshino-s/soar-image:dev";
 
 function success(s: string) {
 	console.log(`${chalk.green("✔")} ${s}`);
@@ -59,12 +63,14 @@ async function main() {
 	const nodeInfoPath = `${nodeDir}/${toCamelCase(n, true)}.node.json`;
 
 	const content = execSync(
-		`docker run --pull always --rm registry.yoshino-s.xyz/yoshino-s/soar-image:dev ${n} --help`,
-		{ stdio: "pipe" }
+		`docker run --pull always --rm ${IMAGE} ${n} --help`,
+		{
+			stdio: "pipe",
+		}
 	).toString();
 
 	const { properties, targetArg, extraArgs, format, extraArgParameters } =
-		await parseProjectDiscovery(content);
+		await parseOptions(content);
 
 	const formatMap = {
 		json: "JSON.parse",

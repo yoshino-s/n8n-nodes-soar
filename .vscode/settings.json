@@ -3,5 +3,11 @@
 		"source.organizeImports": true,
 		"source.fixAll": true,
 	},
-	"svg.preview.background": "black"
+	"svg.preview.background": "transparent",
+	"cSpell.words": [
+		"cmdd",
+		"cmdline",
+		"pcap",
+		"Tshark"
+	]
 }

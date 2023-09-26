@@ -14,6 +14,7 @@ export interface RunOptions {
 	env?: Record<string, string>;
 	files?: Record<string, string>;
 	collectFiles?: string[];
+	image?: string;
 }
 
 export const injectCommonProperties = (
@@ -154,6 +155,7 @@ export class SoarExecutor {
 			collectFiles = [],
 			extraArgs = [],
 			extraArgParameters = [],
+			image,
 		}: RunOptions = {}
 	): Promise<{
 		stdout: string;
@@ -197,28 +199,8 @@ export class SoarExecutor {
 			_collectFiles.map(({ name }) => name)
 		);
 
-		let targets: string[] = [];
-		if (this.func.getNodeParameter("batch", idx) as boolean) {
-			targets = this.func.getNodeParameter(
-				"targets",
-				idx,
-				[]
-			) as string[];
-			if (
-				!Array.isArray(targets) ||
-				targets.every((t) => typeof t !== "string")
-			) {
-				throw new NodeOperationError(
-					this.func.getNode(),
-					"Invalid targets"
-				);
-			}
-		} else {
-			targets = [this.func.getNodeParameter("target", idx, "") as string];
-		}
-
 		for (const [key, value] of Object.entries<string>(files)) {
-			cmdline.push("--files", `${key}:${btoa(value)}`);
+			cmdline.push("--files", `${key}:${value}`);
 		}
 		for (const key of collectFiles) {
 			cmdline.push("--collect-files", key);
@@ -228,6 +210,28 @@ export class SoarExecutor {
 		const cmdd = [target, ...extraArgs];
 
 		if (targetArg) {
+			let targets: string[] = [];
+			if (this.func.getNodeParameter("batch", idx) as boolean) {
+				targets = this.func.getNodeParameter(
+					"targets",
+					idx,
+					[]
+				) as string[];
+				if (
+					!Array.isArray(targets) ||
+					targets.every((t) => typeof t !== "string")
+				) {
+					throw new NodeOperationError(
+						this.func.getNode(),
+						"Invalid targets"
+					);
+				}
+			} else {
+				targets = [
+					this.func.getNodeParameter("target", idx, "") as string,
+				];
+			}
+
 			cmdd.push(...targets.flatMap((target) => [targetArg, target]));
 		}
 
@@ -263,7 +267,7 @@ export class SoarExecutor {
 			stderr,
 			err,
 			files: resultFiles,
-		} = await runner.run(cmdline, env);
+		} = await runner.run(cmdline, env, image);
 		if (err) {
 			throw new NodeOperationError(this.func.getNode(), stderr);
 		}

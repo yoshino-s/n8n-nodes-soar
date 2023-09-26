@@ -45,7 +45,8 @@
       "dist/nodes/Httpx/Httpx.node.js",
       "dist/nodes/Subfinder/Subfinder.node.js",
       "dist/nodes/Katana/Katana.node.js",
-      "dist/nodes/Fofa/Fofa.node.js"
+      "dist/nodes/Fofa/Fofa.node.js",
+      "dist/nodes/Tshark/Tshark.node.js"
     ]
   },
   "devDependencies": {

@@ -4,7 +4,7 @@ export interface Runner {
 	run<T extends string>(
 		cmd: string[],
 		env?: Record<string, string>,
-		collectedFiles?: Record<T, string>
+		image?: string
 	): Promise<{
 		stdout?: string;
 		stderr?: string;

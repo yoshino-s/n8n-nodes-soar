@@ -99,17 +99,23 @@ export class Fofa implements INodeType {
 				);
 			}
 
+			data.results ??= [];
+
 			result.push(
 				...this.helpers.constructExecutionMetaData(
 					this.helpers.returnJsonArray(
-						data.results.map((item) =>
-							Object.fromEntries(
-								item.map((item, idx) => [
-									fields.split(",")[idx],
-									item,
-								])
+						data.results
+							.map((item) =>
+								Array.isArray(item) ? item : [item]
 							)
-						)
+							.map((item) =>
+								Object.fromEntries(
+									item.map((item, idx) => [
+										fields.split(",")[idx],
+										item,
+									])
+								)
+							)
 					),
 					{ itemData: { item: idx } }
 				)

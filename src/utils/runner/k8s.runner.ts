@@ -60,7 +60,8 @@ export class K8sRunner implements Runner {
 	}
 	async run<T extends string>(
 		cmd: string[],
-		env?: Record<string, string>
+		env?: Record<string, string>,
+		image: string = IMAGE
 	): Promise<{
 		stdout: string;
 		stderr: string;
@@ -82,7 +83,7 @@ export class K8sRunner implements Runner {
 				containers: [
 					{
 						name: "main-container",
-						image: IMAGE,
+						image,
 						imagePullPolicy: "Always",
 						args: cmd,
 						env: Object.entries(env ?? {}).map(([name, value]) => ({
