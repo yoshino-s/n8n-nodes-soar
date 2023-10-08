@@ -13,6 +13,7 @@ export class Unauthor implements INodeType {
 		displayName: "Soar: Unauthor",
 		name: "unauthor",
 		group: ["output"],
+		icon: "file:unauthor.svg",
 		version: 1,
 		subtitle:
 			"={{ 'unauthor' + ($parameter['batch'] ? ' (Batch)' : ' on ' + $parameter['target']) }}",
