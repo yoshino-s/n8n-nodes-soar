@@ -1,6 +1,13 @@
 # Changelog
 
 
+### [0.1.14](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.13...v0.1.14) (2023-10-08)
+
+
+### Features
+
+* **node:** unauthor ([b1b6831](https://github.com/yoshino-s/n8n-nodes-soar/commit/b1b6831232751147d06ebb78179b1db297b7084e))
+
 ### [0.1.13](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.12...v0.1.13) (2023-09-26)
 
 
