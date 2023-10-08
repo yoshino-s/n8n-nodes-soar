@@ -1,6 +1,8 @@
 # Changelog
 
 
+### [0.1.15](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.14...v0.1.15) (2023-10-08)
+
 ### [0.1.14](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.13...v0.1.14) (2023-10-08)
 
 
