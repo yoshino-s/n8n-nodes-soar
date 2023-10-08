@@ -91,7 +91,6 @@ export class Fofa implements INodeType {
 				}
 			);
 
-			console.log(data);
 			if (data.error && !data.errmsg.includes("820031")) {
 				throw new NodeOperationError(
 					this.getNode(),
