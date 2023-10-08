@@ -56,30 +56,36 @@ export class Unauthor implements INodeType {
 					},
 					options: [
 						{
-							displayName: "Options",
-							name: "key",
-							type: "options",
-							default: "-concurrent",
-							options: [
+							displayName: "Option",
+							name: "option",
+							values: [
 								{
-									name: "Concurrent",
-									value: "-concurrent",
-									description:
-										"Concurrent number (default 20)",
+									displayName: "Options",
+									name: "key",
+									type: "options",
+									default: "--concurrent",
+									options: [
+										{
+											name: "Concurrent",
+											value: "--concurrent",
+											description:
+												"Concurrent number (default 20)",
+										},
+										{
+											name: "Timeout",
+											value: "--timeout",
+											description:
+												"Timeout seconds (default 10s)",
+										},
+									],
 								},
 								{
-									name: "Timeout",
-									value: "-timeout",
-									description:
-										"Timeout seconds (default 10s)",
+									displayName: "Value",
+									name: "value",
+									type: "string",
+									default: "",
 								},
 							],
-						},
-						{
-							displayName: "Value",
-							name: "value",
-							type: "string",
-							default: "",
 						},
 					],
 				},
@@ -96,7 +102,7 @@ export class Unauthor implements INodeType {
 			const type = this.getNodeParameter("type", idx) as string;
 			const response = await executor.run(idx, "unauthor", "--targets", {
 				extraArgs: [type],
-				extraArgParameters: ["options"],
+				extraArgParameters: ["options.option"],
 			});
 
 			result.push(
