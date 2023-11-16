@@ -1,6 +1,18 @@
 # Changelog
 
 
+### [0.1.18](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.16...v0.1.18) (2023-11-16)
+
+
+### Features
+
+* **all:** fit ai-beta UI ([b5f62c8](https://github.com/yoshino-s/n8n-nodes-soar/commit/b5f62c8d47032d7e0ec13ba729d250a3646cd1d3))
+
+
+### Bug Fixes
+
+* **lint:** eslint ([8f745fb](https://github.com/yoshino-s/n8n-nodes-soar/commit/8f745fb33f6c476a839b68ade5e43d8606f10e6a))
+
 ### [0.1.17](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.16...v0.1.17) (2023-11-16)
 
 
