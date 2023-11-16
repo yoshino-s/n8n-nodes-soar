@@ -1,58 +1,57 @@
 import {
 	IExecuteFunctions,
-	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
-	NodeExecutionWithMetadata,
+	SupplyData,
 } from "n8n-workflow";
 
-import { SoarExecutor, injectCommonProperties } from "../../utils/executor";
+import { NodeConnectionType } from "@/interface/connectionType";
+import {
+	collectAdvancedOptions,
+	collectGeneratedOptions,
+	standardContainerRunner,
+} from "@/interface/runner/standardContainerRunner";
 
 export class Template implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: "Soar: Template",
+		displayName: "Runner Template",
 		name: "template",
 		group: ["output"],
 		version: 1,
-		subtitle:
-			"={{ 'template' + ($parameter['batch'] ? ' (Batch)' : ' on ' + $parameter['target']) }}",
 		description: "Interact with Template",
 		defaults: {
 			name: "Template",
 		},
-		inputs: ["main"],
-		outputs: ["main"],
-		credentials: [
-			{
-				name: "dockerCredentialsApi",
-			},
-			{
-				name: "kubernetesCredentialsApi",
-			},
-		],
-		properties: injectCommonProperties(PROPERTY, HAS_TARGET_ARG),
+		// eslint-disable-next-line n8n-nodes-base/node-class-description-inputs-wrong-regular-node
+		inputs: [],
+		// eslint-disable-next-line n8n-nodes-base/node-class-description-outputs-wrong
+		outputs: [NodeConnectionType.InfoCollector] as any,
+		properties: PROPERTY,
 	};
-	async execute(
-		this: IExecuteFunctions
-	): Promise<INodeExecutionData[][] | NodeExecutionWithMetadata[][]> {
-		const result: INodeExecutionData[] = [];
-		const executor = new SoarExecutor(this);
-		for (let idx = 0; idx < this.getInputData().length; idx++) {
-			const response = await executor.run(idx, "template", TARGET_ARG, {
-				extraArgs: EXTRA_ARGS,
-				extraArgParameters: EXTRA_ARG_PARAMETERS,
-			});
 
-			result.push(
-				...this.helpers.constructExecutionMetaData(
-					this.helpers.returnJsonArray(
-						(FORMAT_MAP)(response.stdout)
+	async supplyData(
+		this: IExecuteFunctions,
+		itemIndex: number
+	): Promise<SupplyData> {
+		return {
+			response: standardContainerRunner(
+				(assets) => [
+					"template",
+					...EXTRA_ARGS,
+					...assets.flatMap((a) =>
+						a.basic.host ? [TARGET_ARG, a.basic.host] : []
 					),
-					{ itemData: { item: idx } }
-				)
-			);
-		}
-
-		return [result];
+					...collectGeneratedOptions(this, itemIndex, EXTRA_ARG_PARAMETERS),
+				],
+				(rawAssets, stdout) => {
+					const data = (FORMAT_MAP)(stdout);
+					for (const json of data) {
+						//
+					}
+					return rawAssets.map((a) => a);
+				},
+				collectAdvancedOptions(this, itemIndex)
+			),
+		};
 	}
 }

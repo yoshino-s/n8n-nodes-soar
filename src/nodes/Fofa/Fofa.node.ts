@@ -7,9 +7,11 @@ import {
 	NodeOperationError,
 } from "n8n-workflow";
 
+import { Basic } from "@/common/asset";
+
 export class Fofa implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: "Soar: Fofa",
+		displayName: "Runner Fofa",
 		name: "fofa",
 		group: ["output"],
 		version: 1,
@@ -23,7 +25,7 @@ export class Fofa implements INodeType {
 		outputs: ["main"],
 		credentials: [
 			{
-				name: "fofaCredentialsApi",
+				name: "fofaApi",
 				required: true,
 			},
 		],
@@ -50,7 +52,7 @@ export class Fofa implements INodeType {
 				displayName: "Fields",
 				name: "fields",
 				type: "string",
-				default: "host,ip,port",
+				default: "domain,ip,port,host",
 			},
 			{
 				displayName: "Full",
@@ -77,7 +79,7 @@ export class Fofa implements INodeType {
 				results: string[][];
 			} = await this.helpers.httpRequestWithAuthentication.call(
 				this,
-				"fofaCredentialsApi",
+				"fofaApi",
 				{
 					method: "GET",
 					url: "https://fofa.info/api/v1/search/all",
@@ -91,10 +93,10 @@ export class Fofa implements INodeType {
 				}
 			);
 
-			if (data.error && !data.errmsg.includes("820031")) {
+			if (data.error && data.errmsg && !data.errmsg.includes("820031")) {
 				throw new NodeOperationError(
 					this.getNode(),
-					`Fofa error response: ${data.errmsg}`
+					new Error(`Fofa error response: ${data.errmsg}`)
 				);
 			}
 
@@ -115,6 +117,21 @@ export class Fofa implements INodeType {
 									])
 								)
 							)
+							.map((item) => {
+								const basic: Basic = {
+									ip: item.ip,
+									domain: item.domain,
+									port: parseInt(item.port),
+									protocol: item.base_protocol as any,
+								};
+
+								return {
+									basic,
+									metadata: {
+										...item,
+									},
+								};
+							})
 					),
 					{ itemData: { item: idx } }
 				)

@@ -1,6 +1,13 @@
 # Changelog
 
 
+### [0.1.17](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.16...v0.1.17) (2023-11-16)
+
+
+### Features
+
+* **all:** fit ai-beta UI ([79cd1a2](https://github.com/yoshino-s/n8n-nodes-soar/commit/79cd1a2215632f879ce43d2563b809668ef2388a))
+
 ### [0.1.16](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.15...v0.1.16) (2023-10-08)
 
 

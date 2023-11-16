@@ -4,6 +4,10 @@
     "parser": {
       "syntax": "typescript"
     },
+		"baseUrl": "./",
+		"paths": {
+      "@/*": ["src/*"]
+    },
     "target": "es2020"
   },
   "module": {

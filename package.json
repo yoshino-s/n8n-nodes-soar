@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-soar",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "",
   "keywords": [
     "n8n-community-node-package"
@@ -35,19 +35,23 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/FofaCredentials.credentials.js"
+      "dist/credentials/FofaApi/FofaApi.credentials.js",
+      "dist/credentials/Docker/Docker.credentials.js",
+      "dist/credentials/Kubernetes/Kubernetes.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Uncover/Uncover.node.js",
-      "dist/nodes/Cdncheck/Cdncheck.node.js",
-      "dist/nodes/Naabu/Naabu.node.js",
-      "dist/nodes/Nuclei/Nuclei.node.js",
-      "dist/nodes/Httpx/Httpx.node.js",
-      "dist/nodes/Subfinder/Subfinder.node.js",
-      "dist/nodes/Katana/Katana.node.js",
-      "dist/nodes/Fofa/Fofa.node.js",
-      "dist/nodes/Tshark/Tshark.node.js",
-      "dist/nodes/Unauthor/Unauthor.node.js"
+      "dist/nodes/Executor/DockerExecutor/DockerExecutor.node.js",
+      "dist/nodes/Executor/KubernetesExecutor/KubernetesExecutor.node.js",
+      "dist/nodes/Collector/Collector.node.js",
+      "dist/nodes/Runner/Dns/Dns.node.js",
+      "dist/nodes/Runner/Httpx/Httpx.node.js",
+      "dist/nodes/Runner/Masscan/Masscan.node.js",
+      "dist/nodes/Runner/Naabu/Naabu.node.js",
+      "dist/nodes/Runner/Nuclei/Nuclei.node.js",
+      "dist/nodes/Runner/Subfinder/Subfinder.node.js",
+      "dist/nodes/Runner/Priority/Priority.node.js",
+      "dist/nodes/Runner/Unauthor/Unauthor.node.js",
+      "dist/nodes/Fofa/Fofa.node.js"
     ]
   },
   "devDependencies": {
@@ -60,6 +64,7 @@
     "@types/glob": "^8.0.1",
     "@types/inquirer": "^9.0.3",
     "@types/jest": "^29.2.6",
+    "@types/lodash": "^4.14.200",
     "@types/request-promise-native": "^1.0.18",
     "@typescript-eslint/eslint-plugin": "^5.30.5",
     "@typescript-eslint/parser": "^5.30.5",
@@ -101,9 +106,13 @@
     "header": "# Changelog\n\n"
   },
   "dependencies": {
+    "@kubernetes/client-node": "^0.20.0",
     "axios": "^1.5.0",
+    "class-transformer": "^0.5.1",
     "dockerode": "^3.3.5",
     "inquirer": "^9.2.11",
-    "n8n-nodes-container": "^0.1.8"
+    "lodash": "^4.17.21",
+    "n8n-nodes-container": "^0.1.8",
+    "reflect-metadata": "^0.1.13"
   }
 }

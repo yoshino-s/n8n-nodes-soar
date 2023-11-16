@@ -3,7 +3,6 @@
 		"module": "commonjs",
 		"moduleResolution": "node",
 		"declaration": true,
-		"emitDeclarationOnly": true,
 		"removeComments": true,
 		"emitDecoratorMetadata": true,
 		"experimentalDecorators": true,
@@ -16,5 +15,9 @@
 		"baseUrl": "./",
 		"incremental": true,
 		"skipLibCheck": true,
+		"strict": true,
+		"paths": {
+			"@/*": ["src/*"]
+		}
 	},
 }
