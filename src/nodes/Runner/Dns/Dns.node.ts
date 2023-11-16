@@ -30,7 +30,7 @@ class DnsRunner extends ContainerRunner {
 			queryTypes: this.func.getNodeParameter(
 				"queryType",
 				0,
-				[]
+				[],
 			) as DnsQueryType[],
 			resolvers: (
 				this.func.getNodeParameter("resolvers.resolvers", 0) as {
@@ -43,15 +43,15 @@ class DnsRunner extends ContainerRunner {
 		options.image = IMAGE.SCRIPT;
 
 		options.files["/tmp/dns.js"] = Buffer.from(
-			readFileSync(join(__dirname, "script.js"))
+			readFileSync(join(__dirname, "script.js")),
 		).toString("base64");
 
 		options.files["/tmp/entry.js"] = Buffer.from(
 			`const {resolve} = require("/tmp/dns.js");(async()=> {const hosts=${JSON.stringify(
-				assets.map((n) => n.getDomain()).filter(Boolean)
+				assets.map((n) => n.getDomain()).filter(Boolean),
 			)};console.log(JSON.stringify(await Promise.all(hosts.map(async (host) => resolve(host, ${JSON.stringify(
-				dnsOptions
-			)})))));process.exit(0);})();`
+				dnsOptions,
+			)})))));process.exit(0);})();`,
 		).toString("base64");
 
 		return options;
@@ -185,7 +185,7 @@ export class Dns implements INodeType {
 
 	async supplyData(
 		this: IExecuteFunctions,
-		itemIndex: number
+		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
 			response: [

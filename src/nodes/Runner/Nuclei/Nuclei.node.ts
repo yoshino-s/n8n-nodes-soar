@@ -1153,7 +1153,7 @@ export class Nuclei implements INodeType {
 
 	async supplyData(
 		this: IExecuteFunctions,
-		itemIndex: number
+		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
 			response: [
@@ -1161,7 +1161,7 @@ export class Nuclei implements INodeType {
 					"nuclei",
 					EXPLOIT_RUNNER_PRIORITY,
 					this,
-					itemIndex
+					itemIndex,
 				),
 			],
 		};

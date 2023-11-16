@@ -14,7 +14,7 @@ class HttpxRunner extends ContainerRunner {
 	public cmd(assets: Asset[]): string[] {
 		const path = this.func.getNodeParameter(
 			"path",
-			this.itemIndex
+			this.itemIndex,
 		) as string;
 
 		return [
@@ -42,7 +42,7 @@ class HttpxRunner extends ContainerRunner {
 	public process(rawAssets: Asset[], stdout: string): Asset[] {
 		const path = this.func.getNodeParameter(
 			"path",
-			this.itemIndex
+			this.itemIndex,
 		) as string;
 
 		const result = new Map<string, any>();
@@ -888,7 +888,7 @@ export class Httpx implements INodeType {
 
 	async supplyData(
 		this: IExecuteFunctions,
-		itemIndex: number
+		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
 			response: [

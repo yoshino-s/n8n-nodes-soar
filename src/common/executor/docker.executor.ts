@@ -13,13 +13,13 @@ export class DockerExecutor extends Executor {
 	docker: Dockerode;
 	constructor(
 		credentials: ICredentialDataDecryptedObject,
-		func: IExecuteFunctions
+		func: IExecuteFunctions,
 	) {
 		super(func);
 		if (credentials === undefined) {
 			throw new NodeOperationError(
 				func.getNode(),
-				new Error("No credentials got returned!")
+				new Error("No credentials got returned!"),
 			);
 		}
 		this.docker = new Dockerode(credentials);
@@ -28,7 +28,7 @@ export class DockerExecutor extends Executor {
 	async __run<T extends string = string>(
 		cmd: string[],
 		image: string,
-		env?: Record<string, string>
+		env?: Record<string, string>,
 	): Promise<ExecutorResult<T>> {
 		let stdout = "";
 		let stderr = "";
@@ -77,7 +77,7 @@ export class DockerExecutor extends Executor {
 			AttachStderr: true,
 			AttachStdout: true,
 			Env: Object.entries(env || {}).map(
-				([key, value]) => `${key}=${value}`
+				([key, value]) => `${key}=${value}`,
 			),
 			Tty: false,
 			Cmd: cmd,
@@ -93,7 +93,7 @@ export class DockerExecutor extends Executor {
 		if (stderr !== "") {
 			throw new NodeOperationError(
 				this.func.getNode(),
-				new Error(stderr)
+				new Error(stderr),
 			);
 		}
 

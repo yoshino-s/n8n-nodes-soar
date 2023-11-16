@@ -14,7 +14,7 @@ class UnauthorRunner extends ContainerRunner {
 	public cmd(assets: Asset[]): string[] {
 		const type = this.func.getNodeParameter(
 			"type",
-			this.itemIndex
+			this.itemIndex,
 		) as string;
 		return [
 			"unauthor",
@@ -142,7 +142,7 @@ export class Unauthor implements INodeType {
 
 	async supplyData(
 		this: IExecuteFunctions,
-		itemIndex: number
+		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
 			response: [
@@ -150,7 +150,7 @@ export class Unauthor implements INodeType {
 					"unauthor",
 					APP_RUNNER_PRIORITY,
 					this,
-					itemIndex
+					itemIndex,
 				),
 			],
 		};

@@ -20,7 +20,7 @@ export interface RunOptions {
 }
 
 export const injectCommonProperties = (
-	p: INodeProperties[]
+	p: INodeProperties[],
 ): INodeProperties[] => {
 	return [
 		...p,
@@ -91,7 +91,7 @@ export abstract class ContainerRunner extends Runner {
 	public abstract process(
 		rawAssets: Asset[],
 		stdout: string,
-		files: Record<string, string>
+		files: Record<string, string>,
 	): Asset[];
 
 	protected collectGeneratedOptions(extraArgParameters: string[]): string[] {
@@ -100,7 +100,7 @@ export abstract class ContainerRunner extends Runner {
 			const value = this.func.getNodeParameter(
 				parameter,
 				this.itemIndex,
-				null
+				null,
 			);
 			if (!value) continue;
 			if (typeof value === "string") {
@@ -133,32 +133,32 @@ export abstract class ContainerRunner extends Runner {
 		const _env = this.func.getNodeParameter(
 			"advanced.envs",
 			this.itemIndex,
-			[]
+			[],
 		) as {
 			key: string;
 			value: string;
 		}[];
 
 		options.envs = Object.fromEntries(
-			_env.map(({ key, value }) => [key, value])
+			_env.map(({ key, value }) => [key, value]),
 		);
 
 		const _files = this.func.getNodeParameter(
 			"advanced.files",
 			this.itemIndex,
-			[]
+			[],
 		) as {
 			name: string;
 			content: string;
 		}[];
 		options.files = Object.fromEntries(
-			_files.map(({ name, content }) => [name, content])
+			_files.map(({ name, content }) => [name, content]),
 		);
 
 		const _collectFiles = this.func.getNodeParameter(
 			"advanced.collectFiles",
 			this.itemIndex,
-			[]
+			[],
 		) as {
 			name: string;
 		}[];
@@ -170,7 +170,7 @@ export abstract class ContainerRunner extends Runner {
 		if (collector.executor === undefined) {
 			throw new NodeOperationError(
 				this.func.getNode(),
-				"Executor is not set"
+				"Executor is not set",
 			);
 		}
 
@@ -210,7 +210,7 @@ export abstract class ContainerRunner extends Runner {
 		} = await collector.executor.run(
 			cmdline,
 			options.image ?? IMAGE.DEFAULT,
-			options.envs
+			options.envs,
 		);
 
 		if (error) {

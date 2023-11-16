@@ -15,13 +15,13 @@ export abstract class Executor {
 	abstract __run<T extends string = string>(
 		cmd: string[],
 		image: string,
-		env?: Record<string, string>
+		env?: Record<string, string>,
 	): Promise<ExecutorResult<T>>;
 
 	async run<T extends string = string>(
 		cmd: string[],
 		image: string,
-		env?: Record<string, string>
+		env?: Record<string, string>,
 	): Promise<ExecutorResult<T>> {
 		const { index } = this.func.addInputData(
 			NodeConnectionType.Executor as any,
@@ -35,7 +35,7 @@ export abstract class Executor {
 						},
 					},
 				],
-			]
+			],
 		);
 
 		const resp = await this.__run(cmd, image, env);

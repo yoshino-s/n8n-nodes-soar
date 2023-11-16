@@ -331,14 +331,14 @@ export class Subfinder implements INodeType {
 
 	async supplyData(
 		this: IExecuteFunctions,
-		itemIndex: number
+		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
 			response: new SubfinderRunner(
 				"subfinder",
 				DOMAIN_RUNNER_PRIORITY,
 				this,
-				itemIndex
+				itemIndex,
 			),
 		};
 	}

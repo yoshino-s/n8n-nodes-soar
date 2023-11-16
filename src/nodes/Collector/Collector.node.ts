@@ -61,7 +61,7 @@ export class Collector implements INodeType {
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		let assets = this.getInputData().map((n) =>
-			plainToInstance(Asset, n.json)
+			plainToInstance(Asset, n.json),
 		);
 
 		const batch = this.getNodeParameter("batch", 0) as boolean;
@@ -69,14 +69,14 @@ export class Collector implements INodeType {
 		if (batch) {
 			const executor = (await this.getInputConnectionData(
 				CustomNodeConnectionType.Executor as any,
-				0
+				0,
 			)) as Executor;
 			const collector = new CollectorClass();
 			collector.setExecutor(executor);
 			let runners = (
 				(await this.getInputConnectionData(
 					CustomNodeConnectionType.Runner as any,
-					0
+					0,
 				)) as Runner[][]
 			).flat();
 
@@ -99,14 +99,14 @@ export class Collector implements INodeType {
 				let currentAssets = [asset];
 				const executor = (await this.getInputConnectionData(
 					CustomNodeConnectionType.Executor as any,
-					idx
+					idx,
 				)) as Executor;
 				const collector = new CollectorClass();
 				collector.setExecutor(executor);
 				let runners = (
 					(await this.getInputConnectionData(
 						CustomNodeConnectionType.Runner as any,
-						0
+						0,
 					)) as Runner[][]
 				).flat();
 
@@ -118,10 +118,10 @@ export class Collector implements INodeType {
 				results.push(
 					...this.helpers.constructExecutionMetaData(
 						this.helpers.returnJsonArray(
-							currentAssets.map((n) => instanceToPlain(n))
+							currentAssets.map((n) => instanceToPlain(n)),
 						),
-						{ itemData: { item: idx } }
-					)
+						{ itemData: { item: idx } },
+					),
 				);
 			}
 			return [results];

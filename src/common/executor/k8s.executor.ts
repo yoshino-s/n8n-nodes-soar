@@ -13,13 +13,13 @@ export class K8sExecutor extends Executor {
 	kubeConfig: k8s.KubeConfig;
 	constructor(
 		credentials: ICredentialDataDecryptedObject,
-		func: IExecuteFunctions
+		func: IExecuteFunctions,
 	) {
 		super(func);
 		if (credentials === undefined) {
 			throw new NodeOperationError(
 				func.getNode(),
-				new Error("No credentials got returned!")
+				new Error("No credentials got returned!"),
 			);
 		}
 		const kubeConfig = new k8s.KubeConfig();
@@ -34,7 +34,7 @@ export class K8sExecutor extends Executor {
 				) {
 					throw new NodeOperationError(
 						func.getNode(),
-						new Error("File path not set!")
+						new Error("File path not set!"),
 					);
 				}
 				kubeConfig.loadFromFile(credentials.filePath);
@@ -46,7 +46,7 @@ export class K8sExecutor extends Executor {
 				) {
 					throw new NodeOperationError(
 						func.getNode(),
-						new Error("Content not set!")
+						new Error("Content not set!"),
 					);
 				}
 				kubeConfig.loadFromString(credentials.content);
@@ -54,7 +54,7 @@ export class K8sExecutor extends Executor {
 			default:
 				throw new NodeOperationError(
 					func.getNode(),
-					new Error("Load from value not set!")
+					new Error("Load from value not set!"),
 				);
 		}
 		this.kubeConfig = kubeConfig;
@@ -62,7 +62,7 @@ export class K8sExecutor extends Executor {
 	async __run<T extends string = string>(
 		cmd: string[],
 		image: string,
-		env?: Record<string, string>
+		env?: Record<string, string>,
 	): Promise<ExecutorResult<T>> {
 		const kc = this.kubeConfig;
 
@@ -75,13 +75,13 @@ export class K8sExecutor extends Executor {
 				undefined,
 				undefined,
 				undefined,
-				"managed-by=n8n-nodes-soar"
+				"managed-by=n8n-nodes-soar",
 			)
 		).body.items.filter(
 			(n) =>
 				(n.status?.phase === "Running" ||
 					n.status?.phase === "Pending") &&
-				n.spec?.containers[0].image === image
+				n.spec?.containers[0].image === image,
 		);
 
 		let pod: k8s.V1Pod | undefined = undefined;
@@ -117,7 +117,7 @@ export class K8sExecutor extends Executor {
 
 			const resp = await k8sCoreApi.createNamespacedPod(
 				namespace,
-				podSpec
+				podSpec,
 			);
 
 			pod = resp.body;
@@ -193,7 +193,7 @@ export class K8sExecutor extends Executor {
 							resolve(undefined);
 							break;
 					}
-				}
+				},
 			).catch(reject);
 		});
 
@@ -202,7 +202,7 @@ export class K8sExecutor extends Executor {
 		if (stderrString !== "") {
 			throw new NodeOperationError(
 				this.func.getNode(),
-				new Error(stderrString)
+				new Error(stderrString),
 			);
 		}
 

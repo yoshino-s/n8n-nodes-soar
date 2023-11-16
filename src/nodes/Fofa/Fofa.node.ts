@@ -63,7 +63,7 @@ export class Fofa implements INodeType {
 		],
 	};
 	async execute(
-		this: IExecuteFunctions
+		this: IExecuteFunctions,
 	): Promise<INodeExecutionData[][] | NodeExecutionWithMetadata[][]> {
 		const result: INodeExecutionData[] = [];
 		for (let idx = 0; idx < this.getInputData().length; idx++) {
@@ -90,13 +90,13 @@ export class Fofa implements INodeType {
 						fields,
 						full,
 					},
-				}
+				},
 			);
 
 			if (data.error && data.errmsg && !data.errmsg.includes("820031")) {
 				throw new NodeOperationError(
 					this.getNode(),
-					new Error(`Fofa error response: ${data.errmsg}`)
+					new Error(`Fofa error response: ${data.errmsg}`),
 				);
 			}
 
@@ -107,15 +107,15 @@ export class Fofa implements INodeType {
 					this.helpers.returnJsonArray(
 						data.results
 							.map((item) =>
-								Array.isArray(item) ? item : [item]
+								Array.isArray(item) ? item : [item],
 							)
 							.map((item) =>
 								Object.fromEntries(
 									item.map((item, idx) => [
 										fields.split(",")[idx],
 										item,
-									])
-								)
+									]),
+								),
 							)
 							.map((item) => {
 								const basic: Basic = {
@@ -131,10 +131,10 @@ export class Fofa implements INodeType {
 										...item,
 									},
 								};
-							})
+							}),
 					),
-					{ itemData: { item: idx } }
-				)
+					{ itemData: { item: idx } },
+				),
 			);
 		}
 

@@ -15,7 +15,7 @@ class KatanaRunner extends ContainerRunner {
 	public cmd(assets: Asset[]): string[] {
 		const path = this.func.getNodeParameter(
 			"path",
-			this.itemIndex
+			this.itemIndex,
 		) as string;
 
 		return [
@@ -52,8 +52,8 @@ class KatanaRunner extends ContainerRunner {
 			resultMap.set(
 				`${url.hostname}:${url.port}`,
 				(resultMap.get(`${url.hostname}:${url.port}`) || []).concat(
-					json
-				)
+					json,
+				),
 			);
 		}
 		const resultAssets: Asset[] = [
@@ -78,8 +78,8 @@ class KatanaRunner extends ContainerRunner {
 						},
 						response: r,
 						success: true,
-					})
-				)
+					}),
+				),
 			);
 		});
 		return resultAssets;
@@ -552,7 +552,7 @@ export class Katana implements INodeType {
 
 	async supplyData(
 		this: IExecuteFunctions,
-		itemIndex: number
+		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
 			response: [
@@ -560,7 +560,7 @@ export class Katana implements INodeType {
 					"katana",
 					APP_RUNNER_PRIORITY,
 					this,
-					itemIndex
+					itemIndex,
 				),
 			],
 		};

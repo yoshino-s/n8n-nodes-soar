@@ -64,12 +64,12 @@ export class Priority implements INodeType {
 
 	async supplyData(
 		this: IExecuteFunctions,
-		itemIndex: number
+		itemIndex: number,
 	): Promise<SupplyData> {
 		const runners = (
 			(await this.getInputConnectionData(
 				NodeConnectionType.Runner as any,
-				itemIndex
+				itemIndex,
 			)) as Runner[][]
 		).flat();
 		const mode = this.getNodeParameter("mode", itemIndex) as
@@ -89,7 +89,7 @@ export class Priority implements INodeType {
 		};
 		return {
 			response: runners.map(
-				(r) => new PriorityRunner(r, modifyFunc(r.priority))
+				(r) => new PriorityRunner(r, modifyFunc(r.priority)),
 			),
 		};
 	}

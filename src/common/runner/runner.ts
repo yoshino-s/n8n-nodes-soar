@@ -12,12 +12,12 @@ export abstract class Runner {
 		public readonly name: string,
 		public readonly priority: Priority = DEFAULT_PRIORITY,
 		public readonly func: IExecuteFunctions,
-		public readonly itemIndex: number
+		public readonly itemIndex: number,
 	) {}
 
 	abstract __run(
 		collector: Collector,
-		assets: Asset[]
+		assets: Asset[],
 	): Asset[] | Promise<Asset[]>;
 
 	async run(collector: Collector, assets: Asset[]): Promise<Asset[]> {
@@ -28,7 +28,7 @@ export abstract class Runner {
 				assets.map((a) => ({
 					json: instanceToPlain(a),
 				})),
-			]
+			],
 		);
 
 		let resp = await this.__run(collector, assets);
@@ -36,7 +36,7 @@ export abstract class Runner {
 		const onlySuccess = this.func.getNodeParameter(
 			"onlySuccess",
 			index,
-			true
+			true,
 		) as boolean;
 
 		if (onlySuccess) {

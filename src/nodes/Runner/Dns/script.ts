@@ -43,7 +43,7 @@ async function resolveByDoH(
 	host: string,
 	resolver: string,
 	queryType: string,
-	signal: AbortSignal
+	signal: AbortSignal,
 ): Promise<DnsRecord> {
 	const url = new URL(resolver);
 	url.searchParams.append("name", host);
@@ -56,7 +56,8 @@ async function resolveByDoH(
 	}
 	return {
 		[queryType]: data.Answer.filter(
-			(n: any) => n.type === DNS_QUERY_TYPE_MAP[queryType as DnsQueryType]
+			(n: any) =>
+				n.type === DNS_QUERY_TYPE_MAP[queryType as DnsQueryType],
 		).map((n: any) => n.data),
 	};
 }
@@ -80,7 +81,7 @@ function merge(results: DnsRecord[]): DnsRecord {
 
 export async function resolve(
 	host: string,
-	options: DnsOptions
+	options: DnsOptions,
 ): Promise<DnsRecord> {
 	const signal = AbortSignal.timeout(options.timeout);
 	const results = (
@@ -92,8 +93,8 @@ export async function resolve(
 					} else {
 						throw new Error(`Unsupported resolver: ${resolver}`);
 					}
-				})
-			)
+				}),
+			),
 		)
 	)
 		.map((n) => (n.status === "fulfilled" ? n.value : undefined))

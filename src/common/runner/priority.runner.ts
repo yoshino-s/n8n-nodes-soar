@@ -4,12 +4,15 @@ import { Collector } from "../collector";
 import { Runner } from "./runner";
 
 export class PriorityRunner extends Runner {
-	constructor(private readonly parentRunner: Runner, priority: number) {
+	constructor(
+		private readonly parentRunner: Runner,
+		priority: number,
+	) {
 		super(
 			parentRunner.name,
 			priority,
 			parentRunner.func,
-			parentRunner.itemIndex
+			parentRunner.itemIndex,
 		);
 	}
 	__run(collector: Collector, assets: Asset[]) {

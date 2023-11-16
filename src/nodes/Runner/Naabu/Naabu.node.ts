@@ -21,7 +21,7 @@ class NaabuRunner extends ContainerRunner {
 			"4,6",
 			"-host",
 			[...new Set(assets.map((n) => n.getHost()).filter(Boolean))].join(
-				","
+				",",
 			),
 			...this.collectGeneratedOptions([
 				"options.input",
@@ -488,7 +488,7 @@ export class Naabu implements INodeType {
 
 	async supplyData(
 		this: IExecuteFunctions,
-		itemIndex: number
+		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
 			response: [

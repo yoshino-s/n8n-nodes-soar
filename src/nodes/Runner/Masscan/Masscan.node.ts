@@ -20,21 +20,21 @@ class MasscanRunner extends ContainerRunner {
 			(
 				this.func.getNodeParameter(
 					"rateLimit",
-					this.itemIndex
+					this.itemIndex,
 				) as number
 			).toString(),
 			"--connection-timeout",
 			(
 				this.func.getNodeParameter(
 					"connectionTimeout",
-					this.itemIndex
+					this.itemIndex,
 				) as number
 			).toString(),
 			"--ports",
 			this.func.getNodeParameter("ports", this.itemIndex) as string,
 			...((this.func.getNodeParameter(
 				"bannerGrabbing",
-				this.itemIndex
+				this.itemIndex,
 			) as boolean)
 				? ["--banners"]
 				: []),
@@ -45,13 +45,13 @@ class MasscanRunner extends ContainerRunner {
 	public process(
 		rawAssets: Asset[],
 		stdout: string,
-		files: Record<string, string>
+		files: Record<string, string>,
 	): Asset[] {
 		const raw = JSON.parse(
 			Buffer.from(
 				files[`/tmp/${this.func.getNode().id}.json`],
-				"base64"
-			).toString() + "]"
+				"base64",
+			).toString() + "]",
 		) as Array<{
 			ip: string;
 			ports: Array<{
@@ -149,7 +149,7 @@ export class Masscan implements INodeType {
 
 	async supplyData(
 		this: IExecuteFunctions,
-		itemIndex: number
+		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
 			response: [
@@ -157,7 +157,7 @@ export class Masscan implements INodeType {
 					"masscan",
 					PORT_RUNNER_PRIORITY,
 					this,
-					itemIndex
+					itemIndex,
 				),
 			],
 		};

@@ -16,8 +16,8 @@ export class MissingPropertyError extends Error {
 	constructor(property: string, asset: Asset) {
 		super(
 			`Missing property: ${property} on ${JSON.stringify(
-				instanceToPlain(asset)
-			)}`
+				instanceToPlain(asset),
+			)}`,
 		);
 	}
 }

@@ -33,12 +33,12 @@ export class DockerExecutor implements INodeType {
 
 	async supplyData(
 		this: IExecuteFunctions,
-		itemIndex: number
+		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
 			response: new Executor(
 				await this.getCredentials("dockerApi", itemIndex),
-				this
+				this,
 			),
 		};
 	}
