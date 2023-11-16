@@ -1,6 +1,13 @@
 # Changelog
 
 
+### [0.1.20](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.19...v0.1.20) (2023-11-16)
+
+
+### Bug Fixes
+
+* dep ([fb69ffc](https://github.com/yoshino-s/n8n-nodes-soar/commit/fb69ffc75643851b5a3c1968367888abfcee7e7b))
+
 ### [0.1.19](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.18...v0.1.19) (2023-11-16)
 
 
