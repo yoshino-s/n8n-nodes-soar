@@ -1,6 +1,13 @@
 # Changelog
 
 
+### [0.1.22](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.21...v0.1.22) (2023-11-17)
+
+
+### Bug Fixes
+
+* **split:** fix error in splitBySubdomains ([e6a55a0](https://github.com/yoshino-s/n8n-nodes-soar/commit/e6a55a03ee94f19e418ffc251493b51e64232859))
+
 ### [0.1.21](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.20...v0.1.21) (2023-11-17)
 
 
