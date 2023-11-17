@@ -72,6 +72,7 @@ export class Asset {
 							host: n,
 						},
 						metadata: this.metadata,
+						success: true,
 					});
 				}),
 			];
@@ -92,6 +93,7 @@ export class Asset {
 						ip: n,
 					},
 					metadata: this.metadata,
+					success: true,
 				});
 			});
 		} else {
@@ -109,6 +111,7 @@ export class Asset {
 						protocol: n.protocol,
 					},
 					metadata: this.metadata,
+					success: true,
 				});
 			});
 		} else {
