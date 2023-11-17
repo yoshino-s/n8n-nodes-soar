@@ -33,6 +33,10 @@ export class Asset {
 
 	success = false;
 
+	static fromPlain(plain: Partial<Asset>): Asset {
+		return plainToInstance(Asset, plain);
+	}
+
 	getDomain(): string {
 		if (!this.basic.domain) {
 			throw new MissingPropertyError("basic.domain", this);
@@ -59,7 +63,7 @@ export class Asset {
 	}
 
 	clone(patch?: Partial<Asset>): Asset {
-		return plainToInstance(Asset, Object.assign({}, this, patch));
+		return Asset.fromPlain(Object.assign({}, this, patch));
 	}
 
 	splitBySubdomains(): Asset[] {
@@ -67,9 +71,9 @@ export class Asset {
 			return [
 				this,
 				...this.subdomains.map((n) => {
-					return plainToInstance(Asset, {
+					return Asset.fromPlain({
 						basic: {
-							host: n,
+							domain: n,
 						},
 						metadata: this.metadata,
 						success: true,
@@ -87,7 +91,7 @@ export class Asset {
 				...(this.dnsRecord?.A ?? []),
 				...(this.dnsRecord?.AAAA ?? []),
 			].map((n) => {
-				return plainToInstance(Asset, {
+				return Asset.fromPlain({
 					basic: {
 						domain: this.basic.domain,
 						ip: n,
