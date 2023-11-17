@@ -1,6 +1,13 @@
 # Changelog
 
 
+### [0.1.21](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.20...v0.1.21) (2023-11-17)
+
+
+### Bug Fixes
+
+* **split:** fix unsuccess in split ([55ae48a](https://github.com/yoshino-s/n8n-nodes-soar/commit/55ae48a8eb278be5aa0f2491cbfccc82239a80c8))
+
 ### [0.1.20](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.19...v0.1.20) (2023-11-16)
 
 
