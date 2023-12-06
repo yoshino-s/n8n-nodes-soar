@@ -1,6 +1,13 @@
 # Changelog
 
 
+### [0.1.23](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.22...v0.1.23) (2023-12-06)
+
+
+### Features
+
+* vulbox ([f6caba8](https://github.com/yoshino-s/n8n-nodes-soar/commit/f6caba8e95baf379ae65d4035e0c63934e910a23))
+
 ### [0.1.22](https://github.com/yoshino-s/n8n-nodes-soar/compare/v0.1.21...v0.1.22) (2023-11-17)
 
 
