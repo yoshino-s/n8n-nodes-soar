@@ -6,13 +6,30 @@ import {
 } from "n8n-workflow";
 
 import { Asset, Ports } from "@/common/asset";
+import { Collector } from "@/common/collector";
 import { NodeConnectionType } from "@/common/connectionType";
-import { ContainerRunner } from "@/common/runner/container.runner";
-import { PORT_RUNNER_PRIORITY } from "@/common/runner/priority";
+import { IRunnerData } from "@/common/interface";
+import { proxyRunner } from "@/common/proxy/runner.proxy";
+import {
+	ContainerRunner,
+	advancedOptions,
+} from "@/common/runner/container.runner";
+import {
+	AssetRunner,
+	PORT_RUNNER_PRIORITY,
+	Priority,
+} from "@/common/runner/decorator";
 
-class NaabuRunner extends ContainerRunner {
-	public cmd(assets: Asset[]): string[] {
-		return [
+@Priority(PORT_RUNNER_PRIORITY)
+@AssetRunner
+class NaabuRunner extends ContainerRunner<Asset> {
+	async run(
+		collector: Collector,
+		inputs: IRunnerData<Asset>[],
+	): Promise<IRunnerData<Asset>[]> {
+		const assets = inputs.map((n) => n.json);
+
+		const cmd = [
 			"naabu",
 			"-disable-update-check",
 			"-json",
@@ -20,10 +37,8 @@ class NaabuRunner extends ContainerRunner {
 			"-ip-version",
 			"4,6",
 			"-host",
-			[...new Set(assets.map((n) => n.getHost()).filter(Boolean))].join(
-				",",
-			),
-			...this.collectGeneratedOptions([
+			[...new Set(assets.map((n) => n.getHost()))].join(","),
+			...this.collectGeneratedCmdOptions([
 				"options.input",
 				"options.port",
 				"options.rateLimit",
@@ -33,12 +48,15 @@ class NaabuRunner extends ContainerRunner {
 				"options.optimization",
 			]),
 		];
-	}
 
-	public process(rawAssets: Asset[], stdout: string): Asset[] {
+		const { stdout } = await this.runCmd(collector, cmd, this.getOptions());
+
 		const ports = new Map<string, Ports>();
-		for (const line of stdout.trim().split("\n")) {
-			const json = JSON.parse(line);
+		for (const json of stdout
+			.trim()
+			.split("\n")
+			.filter(Boolean)
+			.map((n) => JSON.parse(n))) {
 			ports.set(json.ip, [
 				...(ports.get(json.ip) ?? []),
 				{
@@ -47,13 +65,17 @@ class NaabuRunner extends ContainerRunner {
 				},
 			]);
 		}
-		return rawAssets.flatMap((a) => {
-			const result = ports.get(a.getHost());
+		return inputs.flatMap((a) => {
+			const result = ports.get(a.json.getHost());
 			if (result) {
-				a.ports = result;
-				a.success = true;
+				return this.constructData(
+					a.sourceInputIndex,
+					a.json.splitByPorts(result),
+					true,
+				);
+			} else {
+				return a;
 			}
-			return a.splitByPorts();
 		});
 	}
 }
@@ -483,6 +505,15 @@ export class Naabu implements INodeType {
 					},
 				],
 			},
+			...advancedOptions,
+			{
+				displayName: "Debug Mode",
+				name: "debug",
+				type: "boolean",
+				default: false,
+				description:
+					"Whether open to see more information in node input & output",
+			},
 		],
 	};
 
@@ -491,9 +522,7 @@ export class Naabu implements INodeType {
 		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
-			response: [
-				new NaabuRunner("naabu", PORT_RUNNER_PRIORITY, this, itemIndex),
-			],
+			response: [proxyRunner(new NaabuRunner(this, itemIndex))],
 		};
 	}
 }

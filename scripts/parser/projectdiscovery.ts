@@ -10,7 +10,7 @@ import { toCamelCase, toDisplayName } from "../utils";
 import { ParseResult } from "./parser";
 
 export async function parseProjectDiscovery(
-	content: string
+	content: string,
 ): Promise<ParseResult> {
 	const result: ParseResult = {
 		properties: [
@@ -125,7 +125,7 @@ export async function parseProjectDiscovery(
 									({ name, value, description }: any) => ({
 										name: `${name} - ${description}`,
 										value,
-									})
+									}),
 								),
 							},
 							{
@@ -136,7 +136,7 @@ export async function parseProjectDiscovery(
 									({ name, value, description }: any) => ({
 										name: `${name} - ${description}`,
 										value,
-									})
+									}),
 								),
 							},
 						])
@@ -145,7 +145,7 @@ export async function parseProjectDiscovery(
 							options.values[0].options =
 								options.values[0].options.filter(
 									({ value }: any) =>
-										answers.keey.includes(value)
+										answers.keey.includes(value),
 								);
 						});
 				}

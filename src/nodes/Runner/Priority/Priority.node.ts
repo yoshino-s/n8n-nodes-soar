@@ -6,8 +6,9 @@ import {
 } from "n8n-workflow";
 
 import { NodeConnectionType } from "@/common/connectionType";
+import { getPriority } from "@/common/runner/decorator";
 import { PriorityRunner } from "@/common/runner/priority.runner";
-import { Runner } from "@/common/runner/runner";
+import { AbstractRunner } from "@/common/runner/runner";
 
 export class Priority implements INodeType {
 	description: INodeTypeDescription = {
@@ -70,7 +71,7 @@ export class Priority implements INodeType {
 			(await this.getInputConnectionData(
 				NodeConnectionType.Runner as any,
 				itemIndex,
-			)) as Runner[][]
+			)) as AbstractRunner[][]
 		).flat();
 		const mode = this.getNodeParameter("mode", itemIndex) as
 			| "increase"
@@ -89,7 +90,7 @@ export class Priority implements INodeType {
 		};
 		return {
 			response: runners.map(
-				(r) => new PriorityRunner(r, modifyFunc(r.priority)),
+				(r) => new PriorityRunner(r, modifyFunc(getPriority(r))),
 			),
 		};
 	}

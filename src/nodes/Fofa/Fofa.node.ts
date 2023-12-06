@@ -7,16 +7,16 @@ import {
 	NodeOperationError,
 } from "n8n-workflow";
 
-import { Basic } from "@/common/asset";
+import { Asset } from "@/common/asset";
 
 export class Fofa implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: "Runner Fofa",
 		name: "fofa",
-		group: ["output"],
+		group: ["transform"],
 		version: 1,
 		icon: "file:fofa.svg",
-		subtitle: "={{ 'fofa' + $parameter['query'] }}",
+		subtitle: "={{ 'fofa: ' + $parameter['query'] }}",
 		description: "Interact with Fofa",
 		defaults: {
 			name: "Fofa",
@@ -52,7 +52,7 @@ export class Fofa implements INodeType {
 				displayName: "Fields",
 				name: "fields",
 				type: "string",
-				default: "domain,ip,port,host",
+				default: "ip,port,host",
 			},
 			{
 				displayName: "Full",
@@ -118,19 +118,35 @@ export class Fofa implements INodeType {
 								),
 							)
 							.map((item) => {
-								const basic: Basic = {
-									ip: item.ip,
-									domain: item.domain,
-									port: parseInt(item.port),
-									protocol: item.base_protocol as any,
-								};
+								const {
+									ip,
+									port,
+									base_protocol,
+									domain,
+									...rest
+								} = item;
+								let host = item.host ?? item.ip;
+								rest.rootDomain = domain;
 
-								return {
-									basic,
-									metadata: {
-										...item,
+								if (!/https?:\/\//.test(host)) {
+									if (port === "443") {
+										host = `https://${host}`;
+									} else {
+										host = `http://${host}`;
+									}
+								}
+
+								const url = new URL(host);
+
+								return Asset.fromPlain({
+									basic: {
+										ip: item.ip,
+										domain: url.hostname,
+										port: parseInt(item.port),
+										protocol: item.base_protocol as any,
 									},
-								};
+									metadata: rest,
+								}).toPlain();
 							}),
 					),
 					{ itemData: { item: idx } },

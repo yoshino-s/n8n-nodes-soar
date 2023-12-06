@@ -24,14 +24,10 @@ export class MissingPropertyError extends Error {
 
 export class Asset {
 	basic = new Basic();
-	subdomains?: string[];
-	dnsRecord?: DnsRecord;
-	ports?: Ports;
 	metadata?: Record<string, any>;
 
 	response?: any;
-
-	success = false;
+	screenshot?: string;
 
 	static fromPlain(plain: Partial<Asset>): Asset {
 		return plainToInstance(Asset, plain);
@@ -51,6 +47,13 @@ export class Asset {
 		return this.basic.domain || this.basic.ip || "";
 	}
 
+	getIP(): string {
+		if (!this.basic.ip) {
+			throw new MissingPropertyError("basic.ip", this);
+		}
+		return this.basic.ip;
+	}
+
 	getPort(): number {
 		if (!this.basic.port) {
 			throw new MissingPropertyError("basic.port", this);
@@ -66,60 +69,49 @@ export class Asset {
 		return Asset.fromPlain(Object.assign({}, this, patch));
 	}
 
-	splitBySubdomains(): Asset[] {
-		if (this.subdomains?.length) {
-			return [
-				this,
-				...this.subdomains.map((n) => {
-					return Asset.fromPlain({
-						basic: {
-							domain: n,
-						},
-						metadata: this.metadata,
-						success: true,
-					});
-				}),
-			];
-		} else {
-			return [this];
-		}
+	splitBySubdomains(subdomains: string[]): Asset[] {
+		return [
+			this,
+			...subdomains.map((n) => {
+				return Asset.fromPlain({
+					basic: {
+						domain: n,
+					},
+					metadata: this.metadata,
+				});
+			}),
+		];
 	}
 
-	splitByDnsRecords(): Asset[] {
-		if (this.dnsRecord && Object.keys(this.dnsRecord).length) {
-			return [
-				...(this.dnsRecord?.A ?? []),
-				...(this.dnsRecord?.AAAA ?? []),
-			].map((n) => {
+	splitByDnsRecords(dnsRecord: DnsRecord): Asset[] {
+		return [...(dnsRecord?.A ?? []), ...(dnsRecord?.AAAA ?? [])].map(
+			(n) => {
 				return Asset.fromPlain({
 					basic: {
 						domain: this.basic.domain,
 						ip: n,
 					},
 					metadata: this.metadata,
-					success: true,
 				});
-			});
-		} else {
-			return [this];
-		}
+			},
+		);
 	}
 
-	splitByPorts(): Asset[] {
-		if (this.ports?.length) {
-			return this.ports.map((n) => {
-				return plainToInstance(Asset, {
-					basic: {
-						domain: this.basic.domain,
-						port: n.port,
-						protocol: n.protocol,
-					},
-					metadata: this.metadata,
-					success: true,
-				});
+	splitByPorts(ports: Ports): Asset[] {
+		return ports.map((n) => {
+			return Asset.fromPlain({
+				basic: {
+					domain: this.basic.domain,
+					ip: this.basic.ip,
+					port: n.port,
+					protocol: n.protocol,
+				},
+				metadata: this.metadata,
 			});
-		} else {
-			return [this];
-		}
+		});
+	}
+
+	toPlain() {
+		return instanceToPlain(this);
 	}
 }

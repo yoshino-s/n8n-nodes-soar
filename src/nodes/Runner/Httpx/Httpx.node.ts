@@ -1,3 +1,6 @@
+import path from "node:path";
+import url from "node:url";
+
 import {
 	IExecuteFunctions,
 	INodeType,
@@ -6,25 +9,46 @@ import {
 } from "n8n-workflow";
 
 import { Asset } from "@/common/asset";
+import { Collector } from "@/common/collector";
 import { NodeConnectionType } from "@/common/connectionType";
-import { ContainerRunner } from "@/common/runner/container.runner";
-import { APP_RUNNER_PRIORITY } from "@/common/runner/priority";
+import { IRunnerData } from "@/common/interface";
+import { proxyRunner } from "@/common/proxy/runner.proxy";
+import {
+	ContainerRunner,
+	advancedOptions,
+} from "@/common/runner/container.runner";
+import {
+	APP_RUNNER_PRIORITY,
+	AssetRunner,
+	Priority,
+} from "@/common/runner/decorator";
 
-class HttpxRunner extends ContainerRunner {
-	public cmd(assets: Asset[]): string[] {
-		const path = this.func.getNodeParameter(
+@Priority(APP_RUNNER_PRIORITY)
+@AssetRunner
+class HttpxRunner extends ContainerRunner<Asset> {
+	async run(
+		collector: Collector,
+		inputs: IRunnerData<Asset>[],
+	): Promise<IRunnerData<Asset>[]> {
+		const assets = inputs.map((n) => n.json);
+		const urlPath = this.func.getNodeParameter(
 			"path",
 			this.itemIndex,
 		) as string;
 
-		return [
+		const uploadResult = this.func.getNodeParameter(
+			"uploadResult",
+			this.itemIndex,
+		) as boolean;
+
+		const cmd = [
 			"httpx",
 			"-disable-update-check",
 			"-json",
 			"-silent",
 			"-target",
-			assets.map((a) => `${a.getHostAndPort()}${path}`).join(","),
-			...this.collectGeneratedOptions([
+			assets.map((a) => `${a.getHostAndPort()}${urlPath}`).join(","),
+			...this.collectGeneratedCmdOptions([
 				"options.probes",
 				"options.headless",
 				"options.matchers",
@@ -37,27 +61,113 @@ class HttpxRunner extends ContainerRunner {
 				"options.optimizations",
 			]),
 		];
-	}
 
-	public process(rawAssets: Asset[], stdout: string): Asset[] {
-		const path = this.func.getNodeParameter(
-			"path",
-			this.itemIndex,
-		) as string;
+		const { stdout } = await this.runCmd(collector, cmd, this.getOptions());
 
 		const result = new Map<string, any>();
-		for (const line of stdout.trim().split("\n")) {
-			const json = JSON.parse(line);
+
+		for (const json of stdout
+			.trim()
+			.split("\n")
+			.filter(Boolean)
+			.map((n) => JSON.parse(n))) {
+			if (uploadResult) {
+				const urlPrefix = this.func.getNodeParameter(
+					"urlPrefix",
+					this.itemIndex,
+				) as string;
+
+				if (json.stored_response_path) {
+					const filePath = json.stored_response_path as string;
+					json.stored_response_url = url.resolve(
+						urlPrefix,
+						path.join(
+							"response",
+							path.basename(path.dirname(filePath)),
+							path.basename(filePath),
+						),
+					);
+				}
+				if (json.screenshot_path) {
+					const filePath = json.screenshot_path as string;
+					json.screenshot_url = url.resolve(
+						urlPrefix,
+						path.join(
+							"screenshot",
+							path.basename(path.dirname(filePath)),
+							path.basename(filePath),
+						),
+					);
+				}
+			}
+
 			result.set(json.input, json);
 		}
-		return rawAssets.map((a) => {
-			const response = result.get(`${a.getHostAndPort()}${path}`);
-			if (response) {
-				a.response = response;
-				a.success = true;
-			}
-			return a;
-		});
+
+		if (uploadResult) {
+			const credentials = await this.func.getCredentials("s3");
+			const bucket = this.func.getNodeParameter("bucket", this.itemIndex);
+
+			await this.runCmd(
+				collector,
+				[
+					"rclone",
+					"copy",
+					"--s3-access-key-id",
+					credentials.accessKeyId as string,
+					"--s3-secret-access-key",
+					credentials.secretAccessKey as string,
+					"--s3-provider",
+					"Other",
+					"--s3-region",
+					credentials.region as string,
+					"--s3-endpoint",
+					credentials.endpoint as string,
+					(credentials.forcePathStyle as boolean)
+						? "--s3-force-path-style"
+						: "",
+					"--s3-no-check-bucket",
+					"/output/",
+					`remote:${bucket}`,
+				],
+				this.getOptions(),
+			);
+		}
+
+		return Promise.all(
+			inputs.map(async (a) => {
+				const response = result.get(
+					`${a.json.getHostAndPort()}${urlPath}`,
+				);
+
+				if (response) {
+					if (response.headless_body) {
+						a.binary ??= {};
+						a.binary["response"] = {
+							data: Buffer.from(response.headless_body).toString(
+								"base64",
+							),
+							mimeType: response.content_type,
+							fileName: "response.txt",
+						};
+						delete response.headless_body;
+					}
+					if (response.screenshot_bytes) {
+						a.binary ??= {};
+						a.binary["screenshot"] = {
+							data: response.screenshot_bytes,
+							mimeType: "image/png",
+							fileName: "screenshot.png",
+						};
+						delete response.screenshot_bytes;
+					}
+
+					a.json.response = response;
+					a.success = true;
+				}
+				return a;
+			}),
+		);
 	}
 }
 
@@ -86,6 +196,12 @@ export class Httpx implements INodeType {
 		defaults: {
 			name: "Httpx",
 		},
+		credentials: [
+			{
+				// eslint-disable-next-line n8n-nodes-base/node-class-description-credentials-name-unsuffixed
+				name: "s3",
+			},
+		],
 		// eslint-disable-next-line n8n-nodes-base/node-class-description-inputs-wrong-regular-node
 		inputs: [],
 		// eslint-disable-next-line n8n-nodes-base/node-class-description-outputs-wrong
@@ -96,6 +212,37 @@ export class Httpx implements INodeType {
 				name: "onlySuccess",
 				type: "boolean",
 				default: true,
+			},
+			{
+				displayName: "Upload Result",
+				name: "uploadResult",
+				type: "boolean",
+				default: false,
+				required: true,
+			},
+			{
+				displayName: "Bucket",
+				name: "bucket",
+				type: "string",
+				default: "",
+				required: true,
+				displayOptions: {
+					show: {
+						uploadResult: [true],
+					},
+				},
+			},
+			{
+				displayName: "URL Prefix",
+				name: "urlPrefix",
+				type: "string",
+				default: "",
+				required: true,
+				displayOptions: {
+					show: {
+						uploadResult: [true],
+					},
+				},
 			},
 			{
 				displayName: "Path",
@@ -306,6 +453,18 @@ export class Httpx implements INodeType {
 										value: "-system-chrome",
 										description:
 											"Enable using local installed chrome for screenshot",
+									},
+									{
+										name: "Exclude Screenshot Bytes",
+										value: "-exclude-screenshot-bytes",
+										description:
+											"Enable excluding screenshot bytes from JSON output",
+									},
+									{
+										name: "Exclude Headless Body",
+										value: "-exclude-headless-body",
+										description:
+											"Enable excluding headless header from JSON output",
 									},
 								],
 							},
@@ -883,6 +1042,15 @@ export class Httpx implements INodeType {
 					},
 				],
 			},
+			...advancedOptions,
+			{
+				displayName: "Debug Mode",
+				name: "debug",
+				type: "boolean",
+				default: false,
+				description:
+					"Whether open to see more information in node input & output",
+			},
 		],
 	};
 
@@ -891,9 +1059,7 @@ export class Httpx implements INodeType {
 		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
-			response: [
-				new HttpxRunner("httpx", APP_RUNNER_PRIORITY, this, itemIndex),
-			],
+			response: [proxyRunner(new HttpxRunner(this, itemIndex))],
 		};
 	}
 }

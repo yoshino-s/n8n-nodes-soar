@@ -1,25 +1,23 @@
-import { Asset } from "../asset";
 import { Collector } from "../collector";
+import { IRunnerData } from "../interface";
 
-import { Runner } from "./runner";
+import { Priority } from "./decorator";
+import { AbstractRunner } from "./runner";
 
-export class PriorityRunner extends Runner {
+export class PriorityRunner<T> extends AbstractRunner<T> {
 	constructor(
-		private readonly parentRunner: Runner,
+		readonly parentRunner: AbstractRunner<T>,
 		priority: number,
 	) {
-		super(
-			parentRunner.name,
-			priority,
-			parentRunner.func,
-			parentRunner.itemIndex,
-		);
+		super(parentRunner.func, parentRunner.itemIndex);
+		Priority(priority)(this.constructor);
 	}
-	__run(collector: Collector, assets: Asset[]) {
-		return assets;
-	}
-	run(collector: Collector, assets: Asset[]): Promise<Asset[]> {
+
+	async run(
+		collector: Collector,
+		inputs: IRunnerData<T>[],
+	): Promise<IRunnerData<T>[]> {
 		// bypass set input/output in priority runner node
-		return this.parentRunner.run(collector, assets);
+		return this.parentRunner.run(collector, inputs);
 	}
 }

@@ -11,21 +11,29 @@ import {
 import { DEFAULT_RESOLVERS, DnsOptions, DnsQueryType } from "./script";
 
 import { Asset, DnsRecord } from "@/common/asset";
+import { Collector } from "@/common/collector";
 import { NodeConnectionType } from "@/common/connectionType";
+import { IRunnerData } from "@/common/interface";
+import { proxyRunner } from "@/common/proxy/runner.proxy";
 import {
 	ContainerRunner,
-	IMAGE,
-	RunOptions,
+	advancedOptions,
 } from "@/common/runner/container.runner";
-import { DNS_RUNNER_PRIORITY } from "@/common/runner/priority";
+import {
+	AssetRunner,
+	DNS_RUNNER_PRIORITY,
+	Priority,
+} from "@/common/runner/decorator";
 
-class DnsRunner extends ContainerRunner {
-	public cmd(): string[] {
-		return ["node", "/tmp/entry.js"];
-	}
-
-	public options(assets: Asset[]): RunOptions {
-		const options = super.options(assets);
+@Priority(DNS_RUNNER_PRIORITY)
+@AssetRunner
+class DnsRunner extends ContainerRunner<Asset> {
+	async run(
+		collector: Collector,
+		inputs: IRunnerData<Asset>[],
+	): Promise<IRunnerData<Asset>[]> {
+		const assets = inputs.map((n) => n.json);
+		const options = super.getOptions();
 		const dnsOptions: DnsOptions = {
 			queryTypes: this.func.getNodeParameter(
 				"queryType",
@@ -40,28 +48,34 @@ class DnsRunner extends ContainerRunner {
 			timeout: this.func.getNodeParameter("timeout", 0) as number,
 		};
 
-		options.image = IMAGE.SCRIPT;
+		options.files["/tmp/dns.js"] = readFileSync(
+			join(__dirname, "script.js"),
+		).toString();
 
-		options.files["/tmp/dns.js"] = Buffer.from(
-			readFileSync(join(__dirname, "script.js")),
-		).toString("base64");
-
-		options.files["/tmp/entry.js"] = Buffer.from(
+		options.files["/tmp/entry.js"] =
 			`const {resolve} = require("/tmp/dns.js");(async()=> {const hosts=${JSON.stringify(
 				assets.map((n) => n.getDomain()).filter(Boolean),
 			)};console.log(JSON.stringify(await Promise.all(hosts.map(async (host) => resolve(host, ${JSON.stringify(
 				dnsOptions,
-			)})))));process.exit(0);})();`,
-		).toString("base64");
+			)})))));process.exit(0);})();`;
 
-		return options;
-	}
+		const { stdout } = await this.runCmd(
+			collector,
+			["node", "/tmp/entry.js"],
+			options,
+		);
 
-	public process(rawAssets: Asset[], stdout: string): Asset[] {
-		return (JSON.parse(stdout) as DnsRecord[]).flatMap((n, idx) => {
-			rawAssets[idx].dnsRecord = n;
-			rawAssets[idx].success = true;
-			return rawAssets[idx].splitBySubdomains();
+		const records = JSON.parse(stdout) as DnsRecord[];
+
+		return records.flatMap((n, idx) => {
+			if (Object.keys(n).length) {
+				return this.constructData(
+					inputs[idx].sourceInputIndex,
+					inputs[idx].json.splitByDnsRecords(n),
+					true,
+				);
+			}
+			return inputs[idx];
 		});
 	}
 }
@@ -180,6 +194,15 @@ export class Dns implements INodeType {
 					},
 				],
 			},
+			...advancedOptions,
+			{
+				displayName: "Debug Mode",
+				name: "debug",
+				type: "boolean",
+				default: false,
+				description:
+					"Whether open to see more information in node input & output",
+			},
 		],
 	};
 
@@ -188,9 +211,7 @@ export class Dns implements INodeType {
 		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
-			response: [
-				new DnsRunner("dns", DNS_RUNNER_PRIORITY, this, itemIndex),
-			],
+			response: [proxyRunner(new DnsRunner(this, itemIndex))],
 		};
 	}
 }

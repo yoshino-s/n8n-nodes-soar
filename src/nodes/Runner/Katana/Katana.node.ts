@@ -1,4 +1,3 @@
-import { plainToInstance } from "class-transformer";
 import {
 	IExecuteFunctions,
 	INodeType,
@@ -7,25 +6,41 @@ import {
 } from "n8n-workflow";
 
 import { Asset } from "@/common/asset";
+import { Collector } from "@/common/collector";
 import { NodeConnectionType } from "@/common/connectionType";
-import { ContainerRunner } from "@/common/runner/container.runner";
-import { APP_RUNNER_PRIORITY } from "@/common/runner/priority";
+import { IRunnerData } from "@/common/interface";
+import { proxyRunner } from "@/common/proxy/runner.proxy";
+import {
+	ContainerRunner,
+	advancedOptions,
+} from "@/common/runner/container.runner";
+import {
+	APP_RUNNER_PRIORITY,
+	AssetRunner,
+	Priority,
+} from "@/common/runner/decorator";
 
-class KatanaRunner extends ContainerRunner {
-	public cmd(assets: Asset[]): string[] {
+@Priority(APP_RUNNER_PRIORITY)
+@AssetRunner
+class KatanaRunner extends ContainerRunner<Asset> {
+	async run(
+		collector: Collector,
+		inputs: IRunnerData<Asset>[],
+	): Promise<IRunnerData<Asset>[]> {
+		const assets = inputs.map((n) => n.json);
 		const path = this.func.getNodeParameter(
 			"path",
 			this.itemIndex,
 		) as string;
 
-		return [
+		const cmd = [
 			"katana",
 			"-disable-update-check",
 			"-jsonl",
 			"-silent",
 			"-list",
 			assets.map((a) => `${a.getHostAndPort()}${path}`).join(","),
-			...this.collectGeneratedOptions([
+			...this.collectGeneratedCmdOptions([
 				"options.configuration",
 				"options.headless",
 				"options.scope",
@@ -34,12 +49,15 @@ class KatanaRunner extends ContainerRunner {
 				"options.output",
 			]),
 		];
-	}
 
-	public process(rawAssets: Asset[], stdout: string): Asset[] {
+		const { stdout } = await this.runCmd(collector, cmd, this.getOptions());
+
 		const resultMap = new Map<string, any[]>();
-		for (const line of stdout.trim().split("\n")) {
-			const json = JSON.parse(line);
+		for (const json of stdout
+			.trim()
+			.split("\n")
+			.filter(Boolean)
+			.map((n) => JSON.parse(n))) {
 			const endpoint = json.request.endpoint;
 			const url = new URL(endpoint);
 			if (!url.port) {
@@ -56,33 +74,30 @@ class KatanaRunner extends ContainerRunner {
 				),
 			);
 		}
-		const resultAssets: Asset[] = [
-			...rawAssets.map((a) => {
-				const result = resultMap.get(a.getHostAndPort());
-				if (result) {
-					resultMap.delete(a.getHostAndPort());
-					a.response = result;
-					a.success = true;
-				}
-				return a;
-			}),
-		];
+		const resultAssets: Asset[] = assets.map((a) => {
+			const result = resultMap.get(a.getHostAndPort());
+			if (result) {
+				resultMap.delete(a.getHostAndPort());
+				a.response = result;
+			}
+			return a;
+		});
 
 		resultMap.forEach((result, [host, port]) => {
 			resultAssets.push(
 				...result.map((r) =>
-					plainToInstance(Asset, {
+					Asset.fromPlain({
 						basic: {
-							host,
-							port,
+							domain: host,
+							port: parseInt(port),
 						},
 						response: r,
-						success: true,
 					}),
 				),
 			);
 		});
-		return resultAssets;
+
+		return this.constructData(-1, resultAssets, true);
 	}
 }
 
@@ -547,6 +562,15 @@ export class Katana implements INodeType {
 					},
 				],
 			},
+			...advancedOptions,
+			{
+				displayName: "Debug Mode",
+				name: "debug",
+				type: "boolean",
+				default: false,
+				description:
+					"Whether open to see more information in node input & output",
+			},
 		],
 	};
 
@@ -555,14 +579,7 @@ export class Katana implements INodeType {
 		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
-			response: [
-				new KatanaRunner(
-					"katana",
-					APP_RUNNER_PRIORITY,
-					this,
-					itemIndex,
-				),
-			],
+			response: [proxyRunner(new KatanaRunner(this, itemIndex))],
 		};
 	}
 }

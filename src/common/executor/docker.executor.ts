@@ -7,29 +7,88 @@ import {
 	NodeOperationError,
 } from "n8n-workflow";
 
-import { Executor, ExecutorResult } from "./executor";
+import {
+	AbstractExecutor,
+	ExecutorRunOptions,
+	ExecutorRunResult,
+} from "./abstract.executor";
 
-export class DockerExecutor extends Executor {
-	docker: Dockerode;
+export class DockerExecutor extends AbstractExecutor {
+	readonly docker: Dockerode;
+	private container?: Dockerode.Container;
+
 	constructor(
+		private readonly image: string,
 		credentials: ICredentialDataDecryptedObject,
 		func: IExecuteFunctions,
 	) {
 		super(func);
-		if (credentials === undefined) {
-			throw new NodeOperationError(
-				func.getNode(),
-				new Error("No credentials got returned!"),
-			);
-		}
 		this.docker = new Dockerode(credentials);
 	}
 
-	async __run<T extends string = string>(
+	setContainer(container: Dockerode.Container) {
+		this.container = container;
+	}
+
+	acquireContainer() {
+		if (!this.container) {
+			throw new NodeOperationError(
+				this.func.getNode(),
+				"Container is not ready",
+			);
+		}
+		return this.container;
+	}
+
+	async listContainers() {
+		return (
+			await this.docker.listContainers({
+				filters: '{"label": ["managed-by=n8n-nodes-soar"]}',
+			})
+		).filter((n) => n.Image === this.image);
+	}
+
+	async findContainerByID(id: string) {
+		const containers = await this.listContainers();
+		const r = containers.find((n) => n.Id === id);
+		if (!r) {
+			throw new NodeOperationError(
+				this.func.getNode(),
+				`Container ${id} not found`,
+			);
+		}
+		return this.docker.getContainer(r.Id);
+	}
+
+	async prepareContainer(): Promise<Dockerode.Container> {
+		const { image } = this;
+		let container: Dockerode.Container;
+
+		const containers = await this.listContainers();
+
+		if (containers.length === 0) {
+			this.func.logger.info(`Boot new container for image ${image}`);
+			await this.docker.pull(image);
+
+			container = await this.docker.createContainer({
+				Image: image,
+				Cmd: ["sleep", "infinity"],
+				Labels: {
+					"managed-by": "n8n-nodes-soar",
+				},
+			});
+			await container.start();
+		} else {
+			container = this.docker.getContainer(containers[0].Id);
+		}
+
+		return container;
+	}
+
+	async run(
 		cmd: string[],
-		image: string,
-		env?: Record<string, string>,
-	): Promise<ExecutorResult<T>> {
+		options?: ExecutorRunOptions,
+	): Promise<ExecutorRunResult> {
 		let stdout = "";
 		let stderr = "";
 
@@ -47,38 +106,12 @@ export class DockerExecutor extends Executor {
 			},
 		});
 
-		await this.docker.pull(image);
-
-		let container: Dockerode.Container;
-
-		const containers = (
-			await this.docker.listContainers({
-				filters: '{"label": ["managed-by=n8n-nodes-soar"]}',
-			})
-		).filter((n) => n.Image === image);
-
-		if (containers.length === 0) {
-			this.func.logger.info(`Boot new container for image ${image}`);
-			container = await this.docker.createContainer({
-				Image: image,
-				Cmd: ["sleep", "infinity"],
-				Labels: {
-					"managed-by": "n8n-nodes-soar",
-				},
-			});
-			await container.start();
-		} else {
-			container = this.docker.getContainer(containers[0].Id);
-		}
-
-		this.func.logger.debug(`Running ${cmd.join(" ")}`);
+		const container = await this.acquireContainer();
 
 		const exec = await container.exec({
-			AttachStderr: true,
-			AttachStdout: true,
-			Env: Object.entries(env || {}).map(
-				([key, value]) => `${key}=${value}`,
-			),
+			AttachStderr: !options?.ignoreStderr,
+			AttachStdout: !options?.ignoreStdout,
+			Env: options?.env,
 			Tty: false,
 			Cmd: cmd,
 		});
@@ -97,8 +130,6 @@ export class DockerExecutor extends Executor {
 			);
 		}
 
-		this.func.logger.debug(`Result ${stdout}`);
-
-		return JSON.parse(stdout);
+		return { stdout, stderr };
 	}
 }

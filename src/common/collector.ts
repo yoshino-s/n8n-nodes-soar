@@ -1,11 +1,11 @@
-import { Executor } from "./executor/executor";
+import { AbstractExecutor } from "./executor/abstract.executor";
 
 export class Collector {
-	executor?: Executor;
+	executor?: AbstractExecutor;
 	constructor() {
 		//
 	}
-	setExecutor(executor: Executor) {
+	setExecutor(executor: AbstractExecutor) {
 		this.executor = executor;
 	}
 }

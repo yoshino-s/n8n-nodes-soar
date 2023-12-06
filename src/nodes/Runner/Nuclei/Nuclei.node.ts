@@ -6,20 +6,37 @@ import {
 } from "n8n-workflow";
 
 import { Asset } from "@/common/asset";
+import { Collector } from "@/common/collector";
 import { NodeConnectionType } from "@/common/connectionType";
-import { ContainerRunner } from "@/common/runner/container.runner";
-import { EXPLOIT_RUNNER_PRIORITY } from "@/common/runner/priority";
+import { IRunnerData } from "@/common/interface";
+import { proxyRunner } from "@/common/proxy/runner.proxy";
+import {
+	ContainerRunner,
+	advancedOptions,
+} from "@/common/runner/container.runner";
+import {
+	AssetRunner,
+	EXPLOIT_RUNNER_PRIORITY,
+	Priority,
+} from "@/common/runner/decorator";
 
-class NucleiRunner extends ContainerRunner {
-	public cmd(assets: Asset[]): string[] {
-		return [
+@Priority(EXPLOIT_RUNNER_PRIORITY)
+@AssetRunner
+class NucleiRunner extends ContainerRunner<Asset> {
+	async run(
+		collector: Collector,
+		inputs: IRunnerData<Asset>[],
+	): Promise<IRunnerData<Asset>[]> {
+		const assets = inputs.map((n) => n.json);
+
+		const cmd = [
 			"nuclei",
 			"-silent",
 			"-jsonl",
 			"-disable-update-check",
 			"-target",
 			assets.map((a) => a.getHostAndPort()).join(","),
-			...this.collectGeneratedOptions([
+			...this.collectGeneratedCmdOptions([
 				"options.target",
 				"options.templates",
 				"options.filtering",
@@ -35,18 +52,21 @@ class NucleiRunner extends ContainerRunner {
 				"options.cloud",
 			]),
 		];
-	}
 
-	public process(rawAssets: Asset[], stdout: string): Asset[] {
+		const { stdout } = await this.runCmd(collector, cmd, this.getOptions());
+
 		const result = new Map<string, any[]>();
-		for (const line of stdout.trim().split("\n")) {
-			const json = JSON.parse(line);
+		for (const json of stdout
+			.trim()
+			.split("\n")
+			.filter(Boolean)
+			.map((n) => JSON.parse(n))) {
 			result.set(json.host, (result.get(json.host) || []).concat(json));
 		}
-		return rawAssets.map((a) => {
-			const res = result.get(a.getHostAndPort());
+		return inputs.map((a) => {
+			const res = result.get(a.json.getHostAndPort());
 			if (res) {
-				a.response = res;
+				a.json.response = res;
 				a.success = true;
 			}
 			return a;
@@ -1148,6 +1168,15 @@ export class Nuclei implements INodeType {
 					},
 				],
 			},
+			...advancedOptions,
+			{
+				displayName: "Debug Mode",
+				name: "debug",
+				type: "boolean",
+				default: false,
+				description:
+					"Whether open to see more information in node input & output",
+			},
 		],
 	};
 
@@ -1156,14 +1185,7 @@ export class Nuclei implements INodeType {
 		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
-			response: [
-				new NucleiRunner(
-					"nuclei",
-					EXPLOIT_RUNNER_PRIORITY,
-					this,
-					itemIndex,
-				),
-			],
+			response: [proxyRunner(new NucleiRunner(this, itemIndex))],
 		};
 	}
 }

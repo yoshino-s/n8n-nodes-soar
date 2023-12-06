@@ -6,20 +6,37 @@ import {
 } from "n8n-workflow";
 
 import { Asset } from "@/common/asset";
+import { Collector } from "@/common/collector";
 import { NodeConnectionType } from "@/common/connectionType";
-import { ContainerRunner } from "@/common/runner/container.runner";
-import { DOMAIN_RUNNER_PRIORITY } from "@/common/runner/priority";
+import { IRunnerData } from "@/common/interface";
+import { proxyRunner } from "@/common/proxy/runner.proxy";
+import {
+	ContainerRunner,
+	advancedOptions,
+} from "@/common/runner/container.runner";
+import {
+	AssetRunner,
+	DOMAIN_RUNNER_PRIORITY,
+	Priority,
+} from "@/common/runner/decorator";
 
-class SubfinderRunner extends ContainerRunner {
-	public cmd(assets: Asset[]): string[] {
-		return [
+@Priority(DOMAIN_RUNNER_PRIORITY)
+@AssetRunner
+class SubfinderRunner extends ContainerRunner<Asset> {
+	async run(
+		collector: Collector,
+		inputs: IRunnerData<Asset>[],
+	): Promise<IRunnerData<Asset>[]> {
+		const assets = inputs.map((n) => n.json);
+
+		const cmd = [
 			"subfinder",
 			"-disable-update-check",
 			"-json",
 			"-silent",
 			"-domain",
 			assets.map((a) => a.getDomain()).join(","),
-			...this.collectGeneratedOptions([
+			...this.collectGeneratedCmdOptions([
 				"options.source",
 				"options.filter",
 				"options.rateLimit",
@@ -28,21 +45,31 @@ class SubfinderRunner extends ContainerRunner {
 				"options.optimization",
 			]),
 		];
-	}
 
-	public process(rawAssets: Asset[], stdout: string): Asset[] {
+		const { stdout } = await this.runCmd(collector, cmd, this.getOptions());
+
 		const subdomains = new Map<string, string[]>();
-		for (const line of stdout.trim().split("\n")) {
-			const json = JSON.parse(line);
+		for (const json of stdout
+			.trim()
+			.split("\n")
+			.filter(Boolean)
+			.map((n) => JSON.parse(n))) {
 			subdomains.set(json.input, [
 				...(subdomains.get(json.input) ?? []),
 				json.host,
 			]);
 		}
-		return rawAssets.flatMap((a) => {
-			a.subdomains = subdomains.get(a.getDomain());
-			a.success = true;
-			return a.splitBySubdomains();
+		return inputs.flatMap((a) => {
+			const subdomain = subdomains.get(a.json.getDomain());
+			if (subdomain) {
+				return this.constructData(
+					a.sourceInputIndex,
+					a.json.splitBySubdomains(subdomain),
+					true,
+				);
+			} else {
+				return a;
+			}
 		});
 	}
 }
@@ -326,6 +353,15 @@ export class Subfinder implements INodeType {
 					},
 				],
 			},
+			...advancedOptions,
+			{
+				displayName: "Debug Mode",
+				name: "debug",
+				type: "boolean",
+				default: false,
+				description:
+					"Whether open to see more information in node input & output",
+			},
 		],
 	};
 
@@ -334,12 +370,7 @@ export class Subfinder implements INodeType {
 		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
-			response: new SubfinderRunner(
-				"subfinder",
-				DOMAIN_RUNNER_PRIORITY,
-				this,
-				itemIndex,
-			),
+			response: [proxyRunner(new SubfinderRunner(this, itemIndex))],
 		};
 	}
 }

@@ -49,7 +49,7 @@ async function main() {
 	nodeInfo.node = `n8n-nodes-soar.${toCamelCase(n)}`;
 	const dst = `dist/nodes/${toCamelCase(n, true)}/${toCamelCase(
 		n,
-		true
+		true,
 	)}.node.js`;
 
 	if (pkg.n8n.nodes.includes(dst)) {
@@ -66,7 +66,7 @@ async function main() {
 		`docker run --pull always --rm ${IMAGE} ${n} --help`,
 		{
 			stdio: "pipe",
-		}
+		},
 	).toString();
 
 	const { properties, targetArg, extraArgs, format, extraArgParameters } =
@@ -92,10 +92,10 @@ async function main() {
 			.replace("EXTRA_ARGS", JSON.stringify(extraArgs, null, 2))
 			.replace(
 				"EXTRA_ARG_PARAMETERS",
-				JSON.stringify(extraArgParameters, null, 2)
+				JSON.stringify(extraArgParameters, null, 2),
 			)
 
-			.replace("FORMAT_MAP", formatMap[format])
+			.replace("FORMAT_MAP", formatMap[format]),
 	);
 	success(`${nodeFile} created`);
 	fs.writeFileSync(nodeInfoPath, JSON.stringify(nodeInfo, null, 2));

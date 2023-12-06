@@ -7,21 +7,23 @@ import {
 	NodeOperationError,
 } from "n8n-workflow";
 
-import { Executor, ExecutorResult } from "./executor";
+import {
+	AbstractExecutor,
+	ExecutorRunOptions,
+	ExecutorRunResult,
+} from "./abstract.executor";
 
-export class K8sExecutor extends Executor {
+export class KubernetesExecutor extends AbstractExecutor {
+	podName?: string;
+
 	kubeConfig: k8s.KubeConfig;
 	constructor(
+		private readonly namespace: string,
+		private readonly image: string,
 		credentials: ICredentialDataDecryptedObject,
 		func: IExecuteFunctions,
 	) {
 		super(func);
-		if (credentials === undefined) {
-			throw new NodeOperationError(
-				func.getNode(),
-				new Error("No credentials got returned!"),
-			);
-		}
 		const kubeConfig = new k8s.KubeConfig();
 		switch (credentials.loadFrom) {
 			case "automatic":
@@ -59,43 +61,71 @@ export class K8sExecutor extends Executor {
 		}
 		this.kubeConfig = kubeConfig;
 	}
-	async __run<T extends string = string>(
-		cmd: string[],
-		image: string,
-		env?: Record<string, string>,
-	): Promise<ExecutorResult<T>> {
+
+	setPodName(podName: string) {
+		this.podName = podName;
+	}
+
+	acquirePodName() {
+		if (!this.podName) {
+			throw new NodeOperationError(
+				this.func.getNode(),
+				"Pod name is not ready",
+			);
+		}
+		return this.podName;
+	}
+
+	async listNamespaces(): Promise<string[]> {
+		const kc = this.kubeConfig;
+
+		const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
+
+		return (await k8sCoreApi.listNamespace()).body.items.map(
+			(n) => n.metadata?.name ?? "",
+		);
+	}
+
+	async listPods(): Promise<string[]> {
 		const kc = this.kubeConfig;
 
 		const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
 
 		const pods = (
 			await k8sCoreApi.listNamespacedPod(
-				"default",
+				this.namespace,
 				undefined,
 				undefined,
 				undefined,
 				undefined,
 				"managed-by=n8n-nodes-soar",
 			)
-		).body.items.filter(
-			(n) =>
-				(n.status?.phase === "Running" ||
-					n.status?.phase === "Pending") &&
-				n.spec?.containers[0].image === image,
-		);
+		).body.items;
 
-		let pod: k8s.V1Pod | undefined = undefined;
+		return pods
+			.filter(
+				(n) =>
+					(n.status?.phase === "Running" ||
+						n.status?.phase === "Pending") &&
+					n.spec?.containers[0].image === this.image,
+			)
+			.map((n) => n.metadata?.name ?? "");
+	}
 
-		const namespace = "default";
+	async preparePod(): Promise<string> {
+		const { image, namespace } = this;
 
-		if (pods.length > 0) {
-			pod = pods[0];
-		} else {
+		const pods = await this.listPods();
+
+		if (pods.length === 0) {
 			const podName = `n8n-soar-pod-${Date.now()}`;
+
+			this.func.logger.info(`Boot new pod for image ${image}`);
 
 			const podSpec: k8s.V1Pod = {
 				metadata: {
 					name: podName,
+					namespace,
 					labels: {
 						"managed-by": "n8n-nodes-soar",
 					},
@@ -113,21 +143,31 @@ export class K8sExecutor extends Executor {
 					],
 				},
 			};
-			this.func.logger.debug("Creating pod " + JSON.stringify(podSpec));
 
-			const resp = await k8sCoreApi.createNamespacedPod(
-				namespace,
-				podSpec,
-			);
+			const kc = this.kubeConfig;
 
-			pod = resp.body;
+			const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
+
+			await k8sCoreApi.createNamespacedPod(this.namespace, podSpec);
+
+			return podName;
+		} else {
+			return pods[0];
 		}
+	}
 
-		const name = pod.metadata?.name;
+	async run(
+		cmd: string[],
+		options?: ExecutorRunOptions,
+	): Promise<ExecutorRunResult> {
+		const { namespace } = this;
+		const kc = this.kubeConfig;
 
-		if (!name) {
-			throw new Error("Pod name not set!");
-		}
+		const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
+
+		const name = this.acquirePodName();
+
+		const pod = (await k8sCoreApi.readNamespacedPod(name, namespace)).body;
 
 		// if is in initial
 		if (pod.status?.phase === "Pending") {
@@ -165,8 +205,6 @@ export class K8sExecutor extends Executor {
 			next();
 		};
 
-		this.func.logger.debug(`Running ${cmd.join(" ")}`);
-
 		await new Promise(async (resolve, reject) => {
 			exec.exec(
 				namespace,
@@ -174,10 +212,7 @@ export class K8sExecutor extends Executor {
 				"main-container",
 				[
 					"env",
-					...Object.entries(env || {}).flatMap(([k, v]) => [
-						"-e",
-						`${k}=${v}`,
-					]),
+					...(options?.env?.flatMap((v) => ["-e", v]) ?? []),
 					...cmd,
 				],
 				stdout,
@@ -187,7 +222,8 @@ export class K8sExecutor extends Executor {
 				(s) => {
 					switch (s.status) {
 						case "Failure":
-							reject(s.message);
+							console.log(stderrString, stdoutString);
+							reject(new Error(s.message));
 							break;
 						case "Success":
 							resolve(undefined);
@@ -197,17 +233,9 @@ export class K8sExecutor extends Executor {
 			).catch(reject);
 		});
 
-		stderrString;
-
-		if (stderrString !== "") {
-			throw new NodeOperationError(
-				this.func.getNode(),
-				new Error(stderrString),
-			);
-		}
-
-		this.func.logger.debug(`Result ${stdoutString}`);
-
-		return JSON.parse(stdoutString);
+		return {
+			stdout: stdoutString,
+			stderr: stderrString,
+		};
 	}
 }

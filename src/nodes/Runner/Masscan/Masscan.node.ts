@@ -6,80 +6,94 @@ import {
 } from "n8n-workflow";
 
 import { Asset, Ports } from "@/common/asset";
+import { Collector } from "@/common/collector";
 import { NodeConnectionType } from "@/common/connectionType";
-import { ContainerRunner, RunOptions } from "@/common/runner/container.runner";
-import { PORT_RUNNER_PRIORITY } from "@/common/runner/priority";
+import { IRunnerData } from "@/common/interface";
+import { proxyRunner } from "@/common/proxy/runner.proxy";
+import {
+	ContainerRunner,
+	advancedOptions,
+} from "@/common/runner/container.runner";
+import {
+	AssetRunner,
+	PORT_RUNNER_PRIORITY,
+	Priority,
+} from "@/common/runner/decorator";
 
-class MasscanRunner extends ContainerRunner {
-	public cmd(assets: Asset[]): string[] {
-		return [
+@Priority(PORT_RUNNER_PRIORITY)
+@AssetRunner
+class MasscanRunner extends ContainerRunner<Asset> {
+	async run(
+		collector: Collector,
+		inputs: IRunnerData<Asset>[],
+	): Promise<IRunnerData<Asset>[]> {
+		const assets = inputs.map((n) => n.json);
+		const outputFileName = `/tmp/${this.func.getNode().id}.json`;
+		const rateLimit = this.func.getNodeParameter(
+			"rateLimit",
+			this.itemIndex,
+		) as number;
+		const connectionTimeout = this.func.getNodeParameter(
+			"connectionTimeout",
+			this.itemIndex,
+		) as number;
+		const ports = this.func.getNodeParameter(
+			"ports",
+			this.itemIndex,
+		) as string;
+		const bannerGrabbing = this.func.getNodeParameter(
+			"bannerGrabbing",
+			this.itemIndex,
+		) as boolean;
+
+		const cmd = [
 			"masscan",
 			"-oJ",
-			`/tmp/${this.func.getNode().id}.json`,
+			outputFileName,
 			"--max-rate",
-			(
-				this.func.getNodeParameter(
-					"rateLimit",
-					this.itemIndex,
-				) as number
-			).toString(),
+			rateLimit.toString(),
 			"--connection-timeout",
-			(
-				this.func.getNodeParameter(
-					"connectionTimeout",
-					this.itemIndex,
-				) as number
-			).toString(),
+			connectionTimeout.toString(),
 			"--ports",
-			this.func.getNodeParameter("ports", this.itemIndex) as string,
-			...((this.func.getNodeParameter(
-				"bannerGrabbing",
-				this.itemIndex,
-			) as boolean)
-				? ["--banners"]
-				: []),
-			...new Set(assets.map((n) => n.getHost()).filter(Boolean)),
+			ports,
+			...(bannerGrabbing ? ["--banners"] : []),
+			...new Set(assets.map((n) => n.getIP())),
 		];
-	}
 
-	public process(
-		rawAssets: Asset[],
-		stdout: string,
-		files: Record<string, string>,
-	): Asset[] {
-		const raw = JSON.parse(
-			Buffer.from(
-				files[`/tmp/${this.func.getNode().id}.json`],
-				"base64",
-			).toString() + "]",
-		) as Array<{
+		const options = this.getOptions();
+		options.ignoreStdout = true;
+		options.ignoreStderr = true;
+		options.collectFiles.push(outputFileName);
+
+		const { files } = await this.runCmd(collector, cmd, options);
+
+		const raw = JSON.parse(files[outputFileName] + "]") as Array<{
 			ip: string;
 			ports: Array<{
 				port: number;
 				protocol: "tcp" | "udp";
 			}>;
 		}>;
-		const ports = new Map<string, Ports>();
-		raw.forEach((n) => {
-			const ports_ = ports.get(n.ip) ?? [];
-			ports_.push(...n.ports);
-			ports.set(n.ip, ports_);
-		});
-		return rawAssets.flatMap((a) => {
-			const result = ports.get(a.getHost());
-			if (result) {
-				a.success = true;
-				a.ports = result;
-			}
-			return a.splitByPorts();
-		});
-	}
 
-	public options(assets: Asset[]): RunOptions {
-		const options = super.options(assets);
-		options.ignoreStdout = true;
-		options.collectFiles.push(`/tmp/${this.func.getNode().id}.json`);
-		return options;
+		const portsResult = new Map<string, Ports>();
+		raw.forEach((n) => {
+			const ports_ = portsResult.get(n.ip) ?? [];
+			ports_.push(...n.ports);
+			portsResult.set(n.ip, ports_);
+		});
+
+		return inputs.flatMap((a) => {
+			const result = portsResult.get(a.json.getIP());
+			if (result) {
+				return this.constructData(
+					a.sourceInputIndex,
+					a.json.splitByPorts(result),
+					true,
+				);
+			} else {
+				return a;
+			}
+		});
 	}
 }
 
@@ -144,6 +158,15 @@ export class Masscan implements INodeType {
 				type: "number",
 				default: 10,
 			},
+			...advancedOptions,
+			{
+				displayName: "Debug Mode",
+				name: "debug",
+				type: "boolean",
+				default: false,
+				description:
+					"Whether open to see more information in node input & output",
+			},
 		],
 	};
 
@@ -152,14 +175,7 @@ export class Masscan implements INodeType {
 		itemIndex: number,
 	): Promise<SupplyData> {
 		return {
-			response: [
-				new MasscanRunner(
-					"masscan",
-					PORT_RUNNER_PRIORITY,
-					this,
-					itemIndex,
-				),
-			],
+			response: [proxyRunner(new MasscanRunner(this, itemIndex))],
 		};
 	}
 }

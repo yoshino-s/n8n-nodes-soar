@@ -1,4 +1,3 @@
-import { instanceToPlain, plainToInstance } from "class-transformer";
 import {
 	NodeConnectionType,
 	type IExecuteFunctions,
@@ -7,11 +6,13 @@ import {
 	type INodeTypeDescription,
 } from "n8n-workflow";
 
-import { Asset } from "@/common/asset";
 import { Collector as CollectorClass } from "@/common/collector";
 import { NodeConnectionType as CustomNodeConnectionType } from "@/common/connectionType";
-import { Executor } from "@/common/executor/executor";
-import { Runner } from "@/common/runner/runner";
+import { AbstractExecutor } from "@/common/executor/abstract.executor";
+import { IRunnerData } from "@/common/interface";
+import { AbstractMemorizer } from "@/common/memorizer/abstract.memorizer";
+import { getPriority } from "@/common/runner/decorator";
+import { AbstractRunner } from "@/common/runner/runner";
 
 export class Collector implements INodeType {
 	description: INodeTypeDescription = {
@@ -20,7 +21,7 @@ export class Collector implements INodeType {
 		icon: "fa:link",
 		group: ["transform"],
 		version: 1,
-		description: "A collector to collect all info about site",
+		description: "A collector to collect all info about assets",
 		defaults: {
 			name: "Collector",
 			color: "#D8EF40",
@@ -30,9 +31,15 @@ export class Collector implements INodeType {
 			NodeConnectionType.Main,
 			{
 				displayName: "Executor",
-				maxConnections: 1,
 				type: CustomNodeConnectionType.Executor as any,
 				required: true,
+				maxConnections: 1,
+			},
+			{
+				displayName: "Memorizer",
+				type: CustomNodeConnectionType.Memorizer as any,
+				required: false,
+				maxConnections: 1,
 			},
 			{
 				displayName: "Collector",
@@ -42,89 +49,111 @@ export class Collector implements INodeType {
 		],
 		// eslint-disable-next-line n8n-nodes-base/node-class-description-outputs-wrong
 		outputs: [NodeConnectionType.Main],
-		credentials: [],
 		properties: [
-			{
-				displayName: "Batch",
-				name: "batch",
-				type: "boolean",
-				default: true,
-			},
 			{
 				displayName: "Asset",
 				name: "asset",
 				type: "json",
 				default: "={{ $json }}",
 			},
+			{
+				displayName: "Ignore Memorized Data",
+				name: "ignoreMemorizedData",
+				type: "boolean",
+				default: false,
+			},
 		],
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		let assets = this.getInputData().map((n) =>
-			plainToInstance(Asset, n.json),
-		);
+		const inputs = this.getInputData();
 
-		const batch = this.getNodeParameter("batch", 0) as boolean;
+		const collector = new CollectorClass();
 
-		if (batch) {
+		const run = async <T = any>(
+			inputs: IRunnerData<T>[],
+			idx: number,
+		): Promise<IRunnerData<T>[]> => {
+			const outputs: IRunnerData<T>[] = [];
+
 			const executor = (await this.getInputConnectionData(
 				CustomNodeConnectionType.Executor as any,
-				0,
-			)) as Executor;
-			const collector = new CollectorClass();
+				idx,
+			)) as AbstractExecutor;
+
 			collector.setExecutor(executor);
-			let runners = (
-				(await this.getInputConnectionData(
-					CustomNodeConnectionType.Runner as any,
-					0,
-				)) as Runner[][]
-			).flat();
 
-			runners = runners.sort((a, b) => a.priority - b.priority);
+			const memorizer = (await this.getInputConnectionData(
+				CustomNodeConnectionType.Memorizer as any,
+				idx,
+			)) as AbstractMemorizer | undefined;
+			const ignoreMemorizedData = this.getNodeParameter(
+				"ignoreMemorizedData",
+				idx,
+			);
 
-			for (const runner of runners) {
-				assets = await runner.run(collector, assets);
+			if (memorizer) {
+				const cachedOutput = await memorizer.batchLoad(inputs);
+				inputs = inputs.filter((i, idx) => !cachedOutput[idx]);
+				if (!ignoreMemorizedData) {
+					outputs.push(
+						...(
+							cachedOutput.filter(
+								(o) => o !== null,
+							) as unknown[] as IRunnerData<T>[][]
+						).flat(),
+					);
+				}
+				inputs.forEach((i, idx) => {
+					i.sourceInputIndex = idx;
+				});
 			}
 
-			return [
-				assets.flatMap((n) => {
-					return this.helpers.returnJsonArray(instanceToPlain(n));
-				}),
-			];
-		} else {
-			const results: INodeExecutionData[] = [];
-
-			for (let idx = 0; idx < assets.length; idx++) {
-				const asset = assets[idx];
-				let currentAssets = [asset];
-				const executor = (await this.getInputConnectionData(
-					CustomNodeConnectionType.Executor as any,
-					idx,
-				)) as Executor;
-				const collector = new CollectorClass();
-				collector.setExecutor(executor);
+			if (inputs.length !== 0) {
 				let runners = (
 					(await this.getInputConnectionData(
 						CustomNodeConnectionType.Runner as any,
-						0,
-					)) as Runner[][]
+						idx,
+					)) as AbstractRunner[][]
 				).flat();
 
-				runners = runners.sort((a, b) => a.priority - b.priority);
-
-				for (const runner of runners) {
-					currentAssets = await runner.run(collector, currentAssets);
-				}
-				results.push(
-					...this.helpers.constructExecutionMetaData(
-						this.helpers.returnJsonArray(
-							currentAssets.map((n) => instanceToPlain(n)),
-						),
-						{ itemData: { item: idx } },
-					),
+				runners = runners.sort(
+					(a, b) => getPriority(b) - getPriority(a),
 				);
+
+				let runOutputs = inputs;
+				for (const runner of runners) {
+					runOutputs = await runner.run(collector, runOutputs);
+				}
+
+				if (memorizer) {
+					const paired: IRunnerData<T>[][] = inputs.map(() => []);
+					for (const output of runOutputs) {
+						if (output.sourceInputIndex !== -1) {
+							console.log(output);
+							paired[output.sourceInputIndex].push(output);
+						}
+					}
+					await memorizer.batchSave(inputs, paired);
+				}
+
+				outputs.push(...runOutputs);
 			}
-			return [results];
-		}
+
+			return outputs;
+		};
+
+		return [
+			this.helpers.returnJsonArray(
+				(await run(
+					inputs.map((n, idx) => ({
+						json: n.json,
+						binary: n.binary,
+						sourceInputIndex: idx,
+					})),
+					0,
+				)) as any,
+			),
+		];
 	}
 }
